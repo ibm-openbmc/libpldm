@@ -12,7 +12,27 @@ enum ibm_oem_pldm_state_set_ids {
 	PLDM_OEM_IBM_VERIFICATION_STATE = 32770,
 	PLDM_OEM_IBM_SYSTEM_POWER_STATE = 32771,
 	PLDM_OEM_IBM_SBE_MAINTENANCE_STATE = 32772,
+	PLDM_OEM_IBM_BOOT_SIDE_RENAME = 32773,
+	PLDM_OEM_IBM_SBE_SEMANTIC_ID = 32775,
 	PLDM_OEM_IBM_SBE_HRESET_STATE = 32776,
+
+	PLDM_OEM_IBM_PANEL_TRIGGER_STATE = 32778,
+	PLDM_OEM_IBM_SLOT_ENABLE_EFFECTER_STATE = 32779,
+	PLDM_OEM_IBM_SLOT_ENABLE_SENSOR_STATE = 32780,
+	PLDM_OEM_IBM_PCIE_TOPOLOGY_ACTIONS = 32781,
+};
+
+enum ibm_slot_enable_effecter_state {
+	ADD = 0x1,
+	REMOVE = 0x2,
+	REPLACE = 0x3,
+};
+
+enum ibm_slot_enable_sensor_state {
+	SLOT_STATE_UNKOWN = 0x0,
+	SLOT_STATE_ENABLED = 0x1,
+	SLOT_STATE_DISABLED = 0x2,
+	SLOT_STATE_ERROR = 0x03,
 };
 
 enum ibm_oem_pldm_state_set_firmware_update_state_values {
@@ -45,10 +65,20 @@ enum ibm_oem_pldm_state_set_sbe_dump_state_values {
 	SBE_RETRY_REQUIRED = 0x2,
 };
 
+enum ibm_oem_pldm_state_set_boot_side_rename_state_values {
+	PLDM_BOOT_SIDE_NOT_RENAMED = 1,
+	PLDM_BOOT_SIDE_HAS_BEEN_RENAMED = 2,
+};
 enum ibm_oem_pldm_state_set_sbe_hreset_state_values {
 	SBE_HRESET_NOT_READY = 0x1,
 	SBE_HRESET_READY = 0x2,
 	SBE_HRESET_FAILED = 0x3,
+};
+
+enum pldm_oem_pcie_topology_actions {
+	GET_PCIE_TOPOLOGY = 0x1,
+	GET_CABLE_INFO = 0x2,
+	SAVE_PCIE_TOPLOGY = 0x03,
 };
 
 #ifdef __cplusplus
