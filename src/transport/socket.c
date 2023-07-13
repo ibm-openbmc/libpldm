@@ -48,7 +48,10 @@ int pldm_socket_sndbuf_init(struct pldm_socket_sndbuf *ctx, int socket)
 
 int pldm_socket_sndbuf_accomodate(struct pldm_socket_sndbuf *ctx, int msg_len)
 {
-	if (msg_len < ctx->size) {
+	printf("KK ctx->size:%d msg_len:%d \n",
+	       ctx->size,msg_len);
+	if (msg_len < ctx->size)
+	{
 		return 0;
 	}
 	/* If message is bigger than the max size, don't return a failure. Set
@@ -63,7 +66,9 @@ int pldm_socket_sndbuf_accomodate(struct pldm_socket_sndbuf *ctx, int msg_len)
 	}
 	int rc = setsockopt(ctx->socket, SOL_SOCKET, SO_SNDBUF, &(msg_len),
 			    sizeof(msg_len));
-	if (rc == -1) {
+	printf("KK setsockopt status rc:%d \n", rc);
+	if (rc == -1)
+	{
 		return -1;
 	}
 	ctx->size = msg_len;

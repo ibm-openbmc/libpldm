@@ -5,7 +5,7 @@
 #include "libpldm/transport.h"
 #include "socket.h"
 #include "transport.h"
-
+#include <stdio.h>
 #include <errno.h>
 #include <limits.h>
 #include <poll.h>
@@ -15,6 +15,8 @@
 #include <sys/types.h>
 #include <sys/un.h>
 #include <unistd.h>
+#include <fcntl.h>
+
 
 #define MCTP_DEMUX_NAME "libmctp-demux-daemon"
 const uint8_t mctp_msg_type = MCTP_MSG_TYPE_PLDM;
@@ -80,9 +82,16 @@ pldm_transport_mctp_demux_get_eid(struct pldm_transport_mctp_demux *ctx,
 				  pldm_tid_t tid, mctp_eid_t *eid)
 {
 	int i;
-	for (i = 0; i < MCTP_MAX_NUM_EID; i++) {
-		if (ctx->tid_eid_map[i] == tid) {
+	printf("KK MCTP_MAX_NUM_EID:%d \n",
+	       MCTP_MAX_NUM_EID);
+	 for (i = 0; i < MCTP_MAX_NUM_EID; i++)
+	{
+		printf("KK ctx->tid_eid_map[i]: %d tid:%d \n", ctx->tid_eid_map[i],
+		       tid);
+		if (ctx->tid_eid_map[i] == tid)
+		{
 			*eid = i;
+			printf("KK found tid:%d i:%d \n", ctx->tid_eid_map[i],i);
 			return 0;
 		}
 	}
@@ -167,7 +176,10 @@ pldm_transport_mctp_demux_send(struct pldm_transport *t, pldm_tid_t tid,
 {
 	struct pldm_transport_mctp_demux *demux = transport_to_demux(t);
 	mctp_eid_t eid = 0;
+	printf("KK0 demux->socket:%d is valid: %d errno:%d \n", demux->socket,
+	       (fcntl(demux->socket, F_GETFL) != -1 || errno != EBADF), errno);
 	if (pldm_transport_mctp_demux_get_eid(demux, tid, &eid)) {
+		printf("KK0 PLDM_REQUESTER_SEND_FAIL \n");
 		return PLDM_REQUESTER_SEND_FAIL;
 	}
 
@@ -186,11 +198,14 @@ pldm_transport_mctp_demux_send(struct pldm_transport *t, pldm_tid_t tid,
 	if (req_msg_len > INT_MAX ||
 	    pldm_socket_sndbuf_accomodate(&(demux->socket_send_buf),
 					  (int)req_msg_len)) {
+		printf("KK1 PLDM_REQUESTER_SEND_FAIL \n");
 		return PLDM_REQUESTER_SEND_FAIL;
 	}
-
+	printf("KK1 demux->socket:%d is valid: %d errno:%d \n", demux->socket,
+	       (fcntl(demux->socket, F_GETFL) != -1 || errno != EBADF), errno);
 	ssize_t rc = sendmsg(demux->socket, &msg, 0);
 	if (rc == -1) {
+		printf("KK2 PLDM_REQUESTER_SEND_FAIL \n");
 		return PLDM_REQUESTER_SEND_FAIL;
 	}
 	return PLDM_REQUESTER_SUCCESS;
