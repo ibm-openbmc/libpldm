@@ -19,8 +19,9 @@ Change categories:
 
 ### Changed
 
-1. requester: Mark pldm_close() as LIBPLDM_ABI_TESTING
-2. requester: Expose pldm_close() in header
+1. requester: Stabilize pldm_close()
+2. transport: Stabilize pldm_transport_mctp_demux_destroy()
+3. requester: Expose pldm_close() in header
 
 ### Removed
 
