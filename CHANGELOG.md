@@ -17,6 +17,11 @@ Change categories:
 
 ## [Unreleased]
 
+### Changed
+
+1. requester: Stabilize pldm_close()
+2. transport: Stabilize pldm_transport_mctp_demux_destroy()
+
 ## [0.6.0] - 2023-08-22
 
 ### Changed
