@@ -414,7 +414,7 @@ uint16_t next_container_id(pldm_entity_association_tree *tree);
 pldm_entity_node *pldm_entity_association_tree_add(
 	pldm_entity_association_tree *tree, pldm_entity *entity,
 	uint16_t entity_instance_number, pldm_entity_node *parent,
-	uint8_t association_type, bool is_remote, bool is_update_contanier_id,
+	uint8_t association_type, bool is_remote, bool is_update_container_id,
 	uint16_t container_id);
 
 /** @brief deletes a node and it's children from the entity association tree
@@ -694,7 +694,7 @@ pldm_entity pldm_get_entity_from_record_handle(const pldm_pdr *repo,
  *  @param[in] association_type - association type
  */
 pldm_entity_node *init_pldm_entity_node(pldm_entity entity, pldm_entity parent,
-					uint16_t host_container_id,
+					uint16_t remote_container_id,
 					pldm_entity_node *first_child,
 					pldm_entity_node *next_sibling,
 					uint8_t association_type);

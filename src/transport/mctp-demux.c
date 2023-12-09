@@ -245,7 +245,7 @@ int pldm_transport_mctp_demux_init(struct pldm_transport_mctp_demux **ctx)
 	return 0;
 }
 
-LIBPLDM_ABI_TESTING
+LIBPLDM_ABI_STABLE
 void pldm_transport_mctp_demux_destroy(struct pldm_transport_mctp_demux *ctx)
 {
 	if (!ctx) {

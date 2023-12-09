@@ -25,7 +25,7 @@ pldm_pdr_record *pldm_pdr_find_last_local_record(const pldm_pdr *repo);
  *
  *  @param[in] record_handle - record handle of the pdr
  */
-bool isHBRange(const uint32_t record_handle);
+bool isHBRange(uint32_t record_handle);
 
 /** @brief find the container ID of the contained entity
  *
