@@ -378,6 +378,48 @@ uint32_t pldm_pdr_get_record_count(const pldm_pdr *repo)
 }
 
 LIBPLDM_ABI_STABLE
+int pldm_pdr_record_check_fru_rsi_match(const pldm_pdr_record *record,
+                                        uint16_t rsi, bool *match)
+{
+        if (!record) {
+                return -EINVAL;
+        }
+        uint16_t *record_fru_rsi = NULL;
+        int rc = 0;
+
+        struct pldm_msgbuf _dst;
+        struct pldm_msgbuf *dst = &_dst;
+
+        rc = pldm_msgbuf_init(
+                dst, sizeof(uint16_t),
+                (record->data + sizeof(struct pldm_pdr_hdr) + sizeof(uint16_t)),
+                record->size);
+        if (rc) {
+                printf("init error rc = %d\n", rc);
+                return rc;
+        }
+        rc = pldm_msgbuf_span_required(dst, sizeof(uint16_t),
+                                       (void **)(&record_fru_rsi));
+        if (rc) {
+                printf("span error rc = %d\n", rc);
+                return rc;
+        }
+
+        rc = pldm_msgbuf_destroy(dst);
+        if (rc) {
+                printf("destroy error rc = %d\n", rc);
+                return rc;
+        }
+
+        if (*record_fru_rsi == rsi) {
+                *match = true;
+        } else {
+                *match = false;
+        }
+        return 0;
+}
+
+LIBPLDM_ABI_STABLE
 uint32_t pldm_pdr_get_repo_size(const pldm_pdr *repo)
 {
 	assert(repo != NULL);
