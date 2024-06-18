@@ -404,6 +404,57 @@ bool pldm_pdr_record_is_remote(const pldm_pdr_record *record)
 	return record->is_remote;
 }
 
+static pldm_pdr_record *pldm_pdr_get_prev_record(pldm_pdr *repo,
+                                                 pldm_pdr_record *record)
+{
+        assert(repo);
+        assert(record);
+
+        pldm_pdr_record *prev = NULL;
+        pldm_pdr_record *curr = repo->first;
+
+        while (curr != NULL) {
+                if (curr->record_handle == record->record_handle) {
+                        break;
+                }
+                prev = curr;
+                curr = curr->next;
+        }
+        return prev;
+}
+
+LIBPLDM_ABI_STABLE
+int pldm_pdr_remove_fru_record(pldm_pdr *repo, pldm_pdr_record *record)
+{
+        if (!repo || !record) {
+                return -EINVAL;
+        }
+        if (repo->size < record->size) {
+                return -EOVERFLOW;
+        }
+
+        pldm_pdr_record *next = record->next;
+        pldm_pdr_record *prev = NULL;
+
+        prev = pldm_pdr_get_prev_record(repo, record);
+        if (repo->first == record) {
+                repo->first = next;
+        } else {
+                if (prev != NULL) {
+                        prev->next = next;
+                }
+        }
+        if (repo->last == record) {
+                repo->last = prev;
+        }
+        repo->size = repo->size - record->size;
+
+        free(record->data);
+        free(record);
+
+        return 0;
+}
+
 LIBPLDM_ABI_STABLE
 int pldm_pdr_add_fru_record_set_check(pldm_pdr *repo, uint16_t terminus_handle,
 				      uint16_t fru_rsi, uint16_t entity_type,
