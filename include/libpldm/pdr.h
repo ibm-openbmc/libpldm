@@ -391,6 +391,16 @@ const pldm_pdr_record *pldm_pdr_fru_record_set_find_by_rsi(
 uint32_t pldm_pdr_remove_fru_record_set_by_rsi(pldm_pdr *repo, uint16_t fru_rsi,
 					       bool is_remote);
 
+/** @brief deletes a FRU record set PDR by FRU record set identifier
+ *  @param[in] repo - opaque pointer acting as a PDR repo handle
+ *  @param[in] fru_rsi - FRU record set identifier
+ *  @param[in] is_remote - indicates which PDR to remove, local or remote
+ *
+ *  @return uint32_t the FRU rsi that was removed
+ */
+uint32_t pldm_pdr_remove_fru_record_set_by_rsi(pldm_pdr *repo, uint16_t fru_rsi,
+                                               bool is_remote);
+
 /* =========================== */
 /* Entity Association PDR APIs */
 /* =========================== */
