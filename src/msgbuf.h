@@ -580,6 +580,47 @@ static inline int pldm_msgbuf_span_remaining(struct pldm_msgbuf *ctx,
 
 	return PLDM_SUCCESS;
 }
+
+/**
+ * @brief pldm_msgbuf copy data between two msg buffers
+ *
+ * @param[inout] src - pldm_msgbuf for source from where value should be copied
+ * @param[inout] dst - destination of copy from source
+ * @param[in] size - size of data to be copied
+ * @param[in] description - description of data copied
+ *
+ * @return PLDM_SUCCESS if buffer accesses were in-bounds,
+ * PLDM_ERROR_INVALID_LENGTH otherwise.
+ * PLDM_ERROR_INVALID_DATA if input is invalid
+ */
+#define pldm_msgbuf_copy(dst, src, type, name)                                 \
+	pldm__msgbuf_copy(dst, src, sizeof(type), #name)
+// NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
+static inline int pldm__msgbuf_copy(struct pldm_msgbuf *dst,
+				    struct pldm_msgbuf *src, size_t size,
+				    const char *description)
+{
+	if (!src || !src->cursor || !dst || !dst->cursor || !description) {
+		return PLDM_ERROR_INVALID_DATA;
+	}
+
+	src->remaining -= (ssize_t)size;
+	assert(src->remaining >= 0);
+	if (src->remaining < 0) {
+		return PLDM_ERROR_INVALID_LENGTH;
+	}
+	dst->remaining -= (ssize_t)size;
+	assert(dst->remaining >= 0);
+	if (dst->remaining < 0) {
+		return PLDM_ERROR_INVALID_LENGTH;
+	}
+
+	memcpy(dst->cursor, src->cursor, size);
+	src->cursor += size;
+	dst->cursor += size;
+	return PLDM_SUCCESS;
+}
+
 #ifdef __cplusplus
 }
 #endif
