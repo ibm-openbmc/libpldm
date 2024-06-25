@@ -190,6 +190,15 @@ void pldm_pdr_remove_pdrs_by_terminus_handle(pldm_pdr *repo,
 void pldm_pdr_update_TL_pdr(const pldm_pdr *repo, uint16_t terminus_handle,
 			    uint8_t tid, uint8_t tl_eid, bool valid);
 
+/** @brief Delete record using its record handle
+ *
+ *  @param[in] repo - opaque pointer acting as a PDR repo handle
+ *  @param[in] record_handle - record handle of input PDR record
+ *  @param[in] is_remote - if true, then the PDR is not from this terminus
+ */
+void pldm_delete_by_record_handle(pldm_pdr *repo, uint32_t record_handle,
+				  bool is_remote);
+
 /** @brief Find the last record within the particular range
  * of record handles
  *

@@ -16,6 +16,7 @@ enum ibm_oem_pldm_state_set_ids {
 	PLDM_OEM_IBM_PCIE_SLOT_EFFECTER_STATE = 32773,
 	PLDM_OEM_IBM_PCIE_SLOT_SENSOR_STATE = 32774,
 	PLDM_OEM_IBM_SBE_HRESET_STATE = 32776,
+	PLDM_OEM_IBM_PANEL_TRIGGER_STATE = 32778,
 };
 
 enum pldm_oem_ibm_pcie_slot_effecter_state {
