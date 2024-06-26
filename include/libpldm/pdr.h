@@ -233,6 +233,26 @@ int pldm_pdr_find_child_container_id_index_range_exclude(
 	uint8_t child_index, uint32_t range_exclude_start_handle,
 	uint32_t range_exclude_end_handle, uint16_t *container_id);
 
+/** @brief find the container ID of the contained entity
+ *
+ *  @param[in] repo - opaque pointer acting as a PDR repo handle
+ *  @param[in] entityType - entity type
+ *  @param[in] entityInstance - instance of the entity
+ *  @return container id present in entity association pdr for corresponding entity type and entity instance
+ */
+uint16_t pldm_find_container_id(const pldm_pdr *repo, uint16_t entityType,
+				uint16_t entityInstance);
+
+/** @brief update the container id of an effecter
+ *
+ *  @param[in] repo -  opaque pointer acting as a PDR repo handle
+ *  @param[in] effecterId - effecter ID
+ *  @param[in] containerId - conatiner ID to be updated
+ */
+void pldm_change_container_id_of_effecter(const pldm_pdr *repo,
+					  uint16_t effecterId,
+					  uint16_t containerId);
+
 /* ======================= */
 /* FRU Record Set PDR APIs */
 /* ======================= */
