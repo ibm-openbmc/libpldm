@@ -273,7 +273,7 @@ uint32_t pldm_pdr_get_record_handle(const pldm_pdr *repo LIBPLDM_CC_UNUSED,
 	return record->record_handle;
 }
 
-LIBPLDM_ABI_TESTING
+LIBPLDM_ABI_DEPRECATED
 uint16_t pldm_pdr_get_terminus_handle(const pldm_pdr *repo LIBPLDM_CC_UNUSED,
 		{
 	assert(repo != NULL);
