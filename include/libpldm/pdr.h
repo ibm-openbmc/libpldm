@@ -51,6 +51,9 @@ void pldm_pdr_destroy(pldm_pdr *repo);
  */
 uint32_t pldm_pdr_get_record_count(const pldm_pdr *repo);
 
+uint16_t pldm_pdr_get_terminus_handle(const pldm_pdr *repo,
+				      const pldm_pdr_record *record);
+
 /** @brief Get size of a PDR repository, in bytes
  *
  *  @pre repo must point to a valid object
