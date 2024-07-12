@@ -2239,6 +2239,11 @@ TEST(EntityAssociationPDR, testRemoveContainedEntity)
     pldm_entity_association_tree_destroy(tree);
 }
 
+=======
+#endif
+
+#ifdef LIBPLDM_API_TESTING
+>>>>>>> 969e537 (pdr: Find parent entity of contained entity (#32))
 TEST(EntityAssociationPDR, testfindParentEntityPresent)
 {
     std::vector<uint8_t> pdr{};
@@ -2354,3 +2359,4 @@ TEST(PDRUpdate, testRemoveFruRecord)
     EXPECT_EQ(pldm_pdr_get_record_count(repo), 0);
     pldm_pdr_destroy(repo);
 }
+#endif
