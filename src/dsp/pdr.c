@@ -1381,7 +1381,7 @@ static bool pldm_pdr_find_record_by_handle(pldm_pdr_record **record,
 	return false;
 }
 
-LIBPLDM_ABI_TESTING
+LIBPLDM_ABI_STABLE
 int pldm_entity_association_pdr_add_contained_entity_to_remote_pdr(
 	pldm_pdr *repo, pldm_entity *entity, uint32_t pdr_record_handle)
 {
@@ -1519,7 +1519,7 @@ cleanup_new_record:
 	return rc;
 }
 
-LIBPLDM_ABI_TESTING
+LIBPLDM_ABI_STABLE
 int pldm_entity_association_pdr_create_new(pldm_pdr *repo,
 					   uint32_t pdr_record_handle,
 					   pldm_entity *parent,
@@ -1628,7 +1628,9 @@ int pldm_entity_association_pdr_create_new(pldm_pdr *repo,
 	pldm_msgbuf_extract(src_c, container_id);
 	pldm_msgbuf_insert(dst, container_id);
 	container_id = htole16(container_id);
-	memcpy(container_id_addr, &container_id, sizeof(uint16_t));
+	if (container_id_addr != NULL) {
+		memcpy(container_id_addr, &container_id, sizeof(uint16_t));
+	}
 
 	rc = pldm_msgbuf_destroy(dst);
 	if (rc) {
@@ -1653,5 +1655,66 @@ cleanup_new_record_data:
 	free(new_record->data);
 cleanup_new_record:
 	free(new_record);
+	return rc;
+}
+
+LIBPLDM_ABI_STABLE
+int pldm_entity_association_find_parent_entity(const pldm_pdr *repo,
+					       pldm_entity *parent,
+					       bool is_remote,
+					       uint32_t *record_handle,
+					       bool *found)
+{
+	if (!repo || !parent || !record_handle || !found) {
+		return -EINVAL;
+	}
+	uint16_t container_entity_type = 0;
+	uint16_t container_entity_instance_num = 0;
+	uint16_t entity_container_id = 0;
+	uint8_t hdr_type = 0;
+	pldm_pdr_record *record = repo->first;
+	int rc = 0;
+
+	struct pldm_msgbuf _dst;
+	struct pldm_msgbuf *dst = &_dst;
+
+	while (record != NULL) {
+		rc = pldm_msgbuf_init_errno(
+			dst, sizeof(uint8_t),
+			(record->data + sizeof(uint32_t) + sizeof(uint8_t)),
+			record->size);
+		if (rc) {
+			return rc;
+		}
+
+		pldm_msgbuf_extract(dst, hdr_type);
+
+		if (record->is_remote == is_remote &&
+		    hdr_type == PLDM_PDR_ENTITY_ASSOCIATION) {
+			pldm_msgbuf_init_errno(
+				dst, sizeof(uint16_t),
+				(record->data + sizeof(struct pldm_pdr_hdr) +
+				 sizeof(uint16_t) + sizeof(uint8_t)),
+				record->size);
+			pldm_msgbuf_extract(dst, container_entity_type);
+			pldm_msgbuf_extract(dst, container_entity_instance_num);
+			pldm_msgbuf_extract(dst, entity_container_id);
+			if (container_entity_type == parent->entity_type &&
+			    container_entity_instance_num ==
+				    parent->entity_instance_num &&
+			    entity_container_id ==
+				    parent->entity_container_id) {
+				*record_handle = record->record_handle;
+				*found = true;
+				break;
+			}
+		}
+		record = record->next;
+		rc = pldm_msgbuf_destroy(dst);
+		if (rc) {
+			return rc;
+		}
+	}
+
 	return rc;
 }

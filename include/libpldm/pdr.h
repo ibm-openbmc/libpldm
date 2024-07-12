@@ -491,6 +491,23 @@ int pldm_entity_association_pdr_create_new(pldm_pdr *repo,
 					   pldm_entity *entity,
 					   uint32_t *entity_record_handle);
 
+/** @brief Find if given container entity belongs to the PLDM entity association tree
+ *
+ * @param[in] repo - opaque pointer to pldm PDR repo
+ * @param[in] parent - the container entity
+ * @param[in] is_remote - indicates which PDR to remove, local or remote
+ * @param[in] pdr_record_handle - record handle of the container entity
+ * @param[out] found - bool to indicate if parent entity is present in tree
+ *
+ *  @return 0 on success, -EINVAL if the arguments are invalid, -ENOMEM if an internal memory
+ *  allocation fails, or -EOVERFLOW if value is too large for defined type
+ */
+int pldm_entity_association_find_parent_entity(const pldm_pdr *repo,
+					       pldm_entity *parent,
+					       bool is_remote,
+					       uint32_t *record_handle,
+					       bool *found);
+
 /** @brief Add entity association pdr from node, or return an error
  *
  *  @param[in] node - opaque pointer acting as a handle to an entity node
