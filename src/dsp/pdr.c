@@ -1107,9 +1107,7 @@ static int entity_association_pdr_add_entry(pldm_entity_node *curr,
 		rc = entity_association_pdr_add_children(
 			curr, repo, physical_pdr_size, num_physical_children,
 			PLDM_ENTITY_ASSOCIAION_PHYSICAL, is_remote,
-			terminus_handle,
-			((num_logical_children > 0) ? (record_handle + 1) :
-						      record_handle));
+			terminus_handle, record_handle);
 		if (rc < 0) {
 			return rc;
 		}
