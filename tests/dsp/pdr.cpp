@@ -1,7 +1,6 @@
 #include <endian.h>
 #include <libpldm/pdr.h>
 #include <libpldm/platform.h>
-#include <msgbuf.h>
 
 #include <array>
 #include <cstdint>
@@ -273,7 +272,6 @@ TEST(PDRAccess, testGet)
 
     std::array<uint32_t, 10> in{100, 345, 3, 6, 89, 0, 11, 45, 23434, 123123};
     uint32_t handle = 1;
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     EXPECT_EQ(pldm_pdr_add(repo, reinterpret_cast<uint8_t*>(in.data()),
                            sizeof(in), false, 1, &handle),
               0);
@@ -308,17 +306,14 @@ TEST(PDRAccess, testGet)
     std::array<uint32_t, 10> in2{1000, 3450, 30,  60,     890,
                                  0,    110,  450, 234034, 123123};
     handle = 2;
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     EXPECT_EQ(pldm_pdr_add(repo, reinterpret_cast<uint8_t*>(in2.data()),
                            sizeof(in2), false, 1, &handle),
               0);
     handle = 3;
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     EXPECT_EQ(pldm_pdr_add(repo, reinterpret_cast<uint8_t*>(in2.data()),
                            sizeof(in2), false, 1, &handle),
               0);
     handle = 4;
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     EXPECT_EQ(pldm_pdr_add(repo, reinterpret_cast<uint8_t*>(in2.data()),
                            sizeof(in2), true, 1, &handle),
               0);
@@ -367,7 +362,6 @@ TEST(PDRAccess, testGetNext)
 
     std::array<uint32_t, 10> in{100, 345, 3, 6, 89, 0, 11, 45, 23434, 123123};
     uint32_t handle = 1;
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     EXPECT_EQ(pldm_pdr_add(repo, reinterpret_cast<uint8_t*>(in.data()),
                            sizeof(in), false, 1, &handle),
               0);
@@ -386,17 +380,14 @@ TEST(PDRAccess, testGetNext)
     std::array<uint32_t, 10> in2{1000, 3450, 30,  60,     890,
                                  0,    110,  450, 234034, 123123};
     handle = 2;
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     EXPECT_EQ(pldm_pdr_add(repo, reinterpret_cast<uint8_t*>(in2.data()),
                            sizeof(in2), false, 1, &handle),
               0);
     handle = 3;
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     EXPECT_EQ(pldm_pdr_add(repo, reinterpret_cast<uint8_t*>(in2.data()),
                            sizeof(in2), false, 1, &handle),
               0);
     handle = 4;
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     EXPECT_EQ(pldm_pdr_add(repo, reinterpret_cast<uint8_t*>(in2.data()),
                            sizeof(in2), false, 1, &handle),
               0);
@@ -429,7 +420,6 @@ TEST(PDRAccess, testFindByType)
     auto repo = pldm_pdr_init();
 
     std::array<uint8_t, sizeof(pldm_pdr_hdr)> data{};
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     pldm_pdr_hdr* hdr = reinterpret_cast<pldm_pdr_hdr*>(data.data());
     hdr->type = 1;
     uint32_t first = 0;
@@ -503,13 +493,11 @@ TEST(PDRUpdate, testAddFruRecordSet)
     EXPECT_NE(hdl, nullptr);
     EXPECT_EQ(size, sizeof(pldm_pdr_hdr) + sizeof(pldm_pdr_fru_record_set));
     EXPECT_EQ(nextRecHdl, 0u);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     pldm_pdr_hdr* hdr = reinterpret_cast<pldm_pdr_hdr*>(outData);
     EXPECT_EQ(hdr->version, 1u);
     EXPECT_EQ(hdr->type, PLDM_PDR_FRU_RECORD_SET);
     EXPECT_EQ(hdr->length, htole16(sizeof(pldm_pdr_fru_record_set)));
     EXPECT_EQ(hdr->record_handle, htole32(1));
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     pldm_pdr_fru_record_set* fru = reinterpret_cast<pldm_pdr_fru_record_set*>(
         outData + sizeof(pldm_pdr_hdr));
     EXPECT_EQ(fru->terminus_handle, htole16(1));
@@ -529,13 +517,11 @@ TEST(PDRUpdate, testAddFruRecordSet)
     EXPECT_NE(hdl, nullptr);
     EXPECT_EQ(size, sizeof(pldm_pdr_hdr) + sizeof(pldm_pdr_fru_record_set));
     EXPECT_EQ(nextRecHdl, 0u);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     hdr = reinterpret_cast<pldm_pdr_hdr*>(outData);
     EXPECT_EQ(hdr->version, 1u);
     EXPECT_EQ(hdr->type, PLDM_PDR_FRU_RECORD_SET);
     EXPECT_EQ(hdr->length, htole16(sizeof(pldm_pdr_fru_record_set)));
     EXPECT_EQ(hdr->record_handle, htole32(2));
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     fru = reinterpret_cast<pldm_pdr_fru_record_set*>(outData +
                                                      sizeof(pldm_pdr_hdr));
     EXPECT_EQ(fru->terminus_handle, htole16(2));
@@ -549,13 +535,11 @@ TEST(PDRUpdate, testAddFruRecordSet)
     EXPECT_NE(hdl, nullptr);
     EXPECT_EQ(size, sizeof(pldm_pdr_hdr) + sizeof(pldm_pdr_fru_record_set));
     EXPECT_EQ(nextRecHdl, 2u);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     hdr = reinterpret_cast<pldm_pdr_hdr*>(outData);
     EXPECT_EQ(hdr->version, 1u);
     EXPECT_EQ(hdr->type, PLDM_PDR_FRU_RECORD_SET);
     EXPECT_EQ(hdr->length, htole16(sizeof(pldm_pdr_fru_record_set)));
     EXPECT_EQ(hdr->record_handle, htole32(1));
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     fru = reinterpret_cast<pldm_pdr_fru_record_set*>(outData +
                                                      sizeof(pldm_pdr_hdr));
     EXPECT_EQ(fru->terminus_handle, htole16(1));
@@ -651,23 +635,20 @@ TEST(PDRAccess, testGetTerminusHandle)
 
     hdr.type = 1;
     uint16_t firstTerminusHandle = 1;
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    EXPECT_EQ(pldm_pdr_add(repo, reinterpret_cast<const uint8_t*>(&hdr),
-                           sizeof(hdr), false, firstTerminusHandle, NULL),
+    EXPECT_EQ(pldm_pdr_add_check(repo, reinterpret_cast<const uint8_t*>(&hdr),
+                                 sizeof(hdr), false, firstTerminusHandle, NULL),
               0);
 
     hdr.type = 2;
     uint16_t secondTerminusHandle = 2;
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    EXPECT_EQ(pldm_pdr_add(repo, reinterpret_cast<const uint8_t*>(&hdr),
-                           sizeof(hdr), true, secondTerminusHandle, NULL),
+    EXPECT_EQ(pldm_pdr_add_check(repo, reinterpret_cast<const uint8_t*>(&hdr),
+                                 sizeof(hdr), true, secondTerminusHandle, NULL),
               0);
 
     hdr.type = 3;
     uint16_t thirdTerminusHandle = 3;
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-    EXPECT_EQ(pldm_pdr_add(repo, reinterpret_cast<const uint8_t*>(&hdr),
-                           sizeof(hdr), true, thirdTerminusHandle, NULL),
+    EXPECT_EQ(pldm_pdr_add_check(repo, reinterpret_cast<const uint8_t*>(&hdr),
+                                 sizeof(hdr), true, thirdTerminusHandle, NULL),
               0);
 
     uint8_t* outData = nullptr;
@@ -1199,19 +1180,16 @@ TEST(EntityAssociationPDR, testPDR)
                                       l1, PLDM_ENTITY_ASSOCIAION_LOGICAL) *
                                   sizeof(pldm_entity)));
     uint8_t* start = data;
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     pldm_pdr_hdr* hdr = reinterpret_cast<pldm_pdr_hdr*>(start);
     EXPECT_EQ(le32toh(hdr->record_handle), 1u);
     EXPECT_EQ(hdr->type, PLDM_PDR_ENTITY_ASSOCIATION);
     EXPECT_EQ(le16toh(hdr->length), size - sizeof(struct pldm_pdr_hdr));
     start += sizeof(pldm_pdr_hdr);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     uint16_t* containerId = reinterpret_cast<uint16_t*>(start);
     EXPECT_EQ(le16toh(*containerId), 1u);
     start += sizeof(uint16_t);
     EXPECT_EQ(*start, PLDM_ENTITY_ASSOCIAION_LOGICAL);
     start += sizeof(uint8_t);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     pldm_entity* entity = reinterpret_cast<pldm_entity*>(start);
     EXPECT_EQ(le16toh(entity->entity_type), 1u);
     EXPECT_EQ(le16toh(entity->entity_instance_num), 1u);
@@ -1220,13 +1198,11 @@ TEST(EntityAssociationPDR, testPDR)
     EXPECT_EQ(*start,
               pldm_entity_get_num_children(l1, PLDM_ENTITY_ASSOCIAION_LOGICAL));
     start += sizeof(uint8_t);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     entity = reinterpret_cast<pldm_entity*>(start);
     EXPECT_EQ(le16toh(entity->entity_type), 3u);
     EXPECT_EQ(le16toh(entity->entity_instance_num), 1u);
     EXPECT_EQ(le16toh(entity->entity_container_id), 1u);
     start += sizeof(pldm_entity);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     entity = reinterpret_cast<pldm_entity*>(start);
     EXPECT_EQ(le16toh(entity->entity_type), 3u);
     EXPECT_EQ(le16toh(entity->entity_instance_num), 2u);
@@ -1239,19 +1215,16 @@ TEST(EntityAssociationPDR, testPDR)
                                       l1, PLDM_ENTITY_ASSOCIAION_PHYSICAL) *
                                   sizeof(pldm_entity)));
     start = data;
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     hdr = reinterpret_cast<pldm_pdr_hdr*>(start);
     EXPECT_EQ(le32toh(hdr->record_handle), 2u);
     EXPECT_EQ(hdr->type, PLDM_PDR_ENTITY_ASSOCIATION);
     EXPECT_EQ(le16toh(hdr->length), size - sizeof(struct pldm_pdr_hdr));
     start += sizeof(pldm_pdr_hdr);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     containerId = reinterpret_cast<uint16_t*>(start);
     EXPECT_EQ(le16toh(*containerId), 1u);
     start += sizeof(uint16_t);
     EXPECT_EQ(*start, PLDM_ENTITY_ASSOCIAION_PHYSICAL);
     start += sizeof(uint8_t);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     entity = reinterpret_cast<pldm_entity*>(start);
     EXPECT_EQ(le16toh(entity->entity_type), 1u);
     EXPECT_EQ(le16toh(entity->entity_instance_num), 1u);
@@ -1260,13 +1233,11 @@ TEST(EntityAssociationPDR, testPDR)
     EXPECT_EQ(*start, pldm_entity_get_num_children(
                           l1, PLDM_ENTITY_ASSOCIAION_PHYSICAL));
     start += sizeof(uint8_t);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     entity = reinterpret_cast<pldm_entity*>(start);
     EXPECT_EQ(le16toh(entity->entity_type), 2u);
     EXPECT_EQ(le16toh(entity->entity_instance_num), 1u);
     EXPECT_EQ(le16toh(entity->entity_container_id), 1u);
     start += sizeof(pldm_entity);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     entity = reinterpret_cast<pldm_entity*>(start);
     EXPECT_EQ(le16toh(entity->entity_type), 2u);
     EXPECT_EQ(le16toh(entity->entity_instance_num), 2u);
@@ -1279,19 +1250,16 @@ TEST(EntityAssociationPDR, testPDR)
                                       l2a, PLDM_ENTITY_ASSOCIAION_LOGICAL) *
                                   sizeof(pldm_entity)));
     start = data;
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     hdr = reinterpret_cast<pldm_pdr_hdr*>(start);
     EXPECT_EQ(le32toh(hdr->record_handle), 3u);
     EXPECT_EQ(hdr->type, PLDM_PDR_ENTITY_ASSOCIATION);
     EXPECT_EQ(le16toh(hdr->length), size - sizeof(struct pldm_pdr_hdr));
     start += sizeof(pldm_pdr_hdr);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     containerId = reinterpret_cast<uint16_t*>(start);
     EXPECT_EQ(le16toh(*containerId), 2u);
     start += sizeof(uint16_t);
     EXPECT_EQ(*start, PLDM_ENTITY_ASSOCIAION_LOGICAL);
     start += sizeof(uint8_t);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     entity = reinterpret_cast<pldm_entity*>(start);
     EXPECT_EQ(le16toh(entity->entity_type), 2u);
     EXPECT_EQ(le16toh(entity->entity_instance_num), 1u);
@@ -1300,13 +1268,11 @@ TEST(EntityAssociationPDR, testPDR)
     EXPECT_EQ(*start, pldm_entity_get_num_children(
                           l2a, PLDM_ENTITY_ASSOCIAION_LOGICAL));
     start += sizeof(uint8_t);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     entity = reinterpret_cast<pldm_entity*>(start);
     EXPECT_EQ(le16toh(entity->entity_type), 5);
     EXPECT_EQ(le16toh(entity->entity_instance_num), 2u);
     EXPECT_EQ(le16toh(entity->entity_container_id), 2u);
     start += sizeof(pldm_entity);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     entity = reinterpret_cast<pldm_entity*>(start);
     EXPECT_EQ(le16toh(entity->entity_type), 5u);
     EXPECT_EQ(le16toh(entity->entity_instance_num), 3u);
@@ -1319,19 +1285,16 @@ TEST(EntityAssociationPDR, testPDR)
                                       l2a, PLDM_ENTITY_ASSOCIAION_PHYSICAL) *
                                   sizeof(pldm_entity)));
     start = data;
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     hdr = reinterpret_cast<pldm_pdr_hdr*>(start);
     EXPECT_EQ(le32toh(hdr->record_handle), 4u);
     EXPECT_EQ(hdr->type, PLDM_PDR_ENTITY_ASSOCIATION);
     EXPECT_EQ(le16toh(hdr->length), size - sizeof(struct pldm_pdr_hdr));
     start += sizeof(pldm_pdr_hdr);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     containerId = reinterpret_cast<uint16_t*>(start);
     EXPECT_EQ(le16toh(*containerId), 2u);
     start += sizeof(uint16_t);
     EXPECT_EQ(*start, PLDM_ENTITY_ASSOCIAION_PHYSICAL);
     start += sizeof(uint8_t);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     entity = reinterpret_cast<pldm_entity*>(start);
     EXPECT_EQ(le16toh(entity->entity_type), 2u);
     EXPECT_EQ(le16toh(entity->entity_instance_num), 1u);
@@ -1340,13 +1303,11 @@ TEST(EntityAssociationPDR, testPDR)
     EXPECT_EQ(*start, pldm_entity_get_num_children(
                           l2a, PLDM_ENTITY_ASSOCIAION_PHYSICAL));
     start += sizeof(uint8_t);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     entity = reinterpret_cast<pldm_entity*>(start);
     EXPECT_EQ(le16toh(entity->entity_type), 4u);
     EXPECT_EQ(le16toh(entity->entity_instance_num), 1u);
     EXPECT_EQ(le16toh(entity->entity_container_id), 2u);
     start += sizeof(pldm_entity);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     entity = reinterpret_cast<pldm_entity*>(start);
     EXPECT_EQ(le16toh(entity->entity_type), 5u);
     EXPECT_EQ(le16toh(entity->entity_instance_num), 1u);
@@ -1359,19 +1320,16 @@ TEST(EntityAssociationPDR, testPDR)
                                       l3a, PLDM_ENTITY_ASSOCIAION_PHYSICAL) *
                                   sizeof(pldm_entity)));
     start = data;
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     hdr = reinterpret_cast<pldm_pdr_hdr*>(start);
     EXPECT_EQ(le32toh(hdr->record_handle), 5u);
     EXPECT_EQ(hdr->type, PLDM_PDR_ENTITY_ASSOCIATION);
     EXPECT_EQ(le16toh(hdr->length), size - sizeof(struct pldm_pdr_hdr));
     start += sizeof(pldm_pdr_hdr);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     containerId = reinterpret_cast<uint16_t*>(start);
     EXPECT_EQ(le16toh(*containerId), 3u);
     start += sizeof(uint16_t);
     EXPECT_EQ(*start, PLDM_ENTITY_ASSOCIAION_PHYSICAL);
     start += sizeof(uint8_t);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     entity = reinterpret_cast<pldm_entity*>(start);
     EXPECT_EQ(le16toh(entity->entity_type), 4u);
     EXPECT_EQ(le16toh(entity->entity_instance_num), 1u);
@@ -1380,7 +1338,6 @@ TEST(EntityAssociationPDR, testPDR)
     EXPECT_EQ(*start, pldm_entity_get_num_children(
                           l3a, PLDM_ENTITY_ASSOCIAION_PHYSICAL));
     start += sizeof(uint8_t);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     entity = reinterpret_cast<pldm_entity*>(start);
     EXPECT_EQ(le16toh(entity->entity_type), 6u);
     EXPECT_EQ(le16toh(entity->entity_instance_num), 1u);
@@ -1393,19 +1350,16 @@ TEST(EntityAssociationPDR, testPDR)
                                       l3b, PLDM_ENTITY_ASSOCIAION_LOGICAL) *
                                   sizeof(pldm_entity)));
     start = data;
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     hdr = reinterpret_cast<pldm_pdr_hdr*>(start);
     EXPECT_EQ(le32toh(hdr->record_handle), 6u);
     EXPECT_EQ(hdr->type, PLDM_PDR_ENTITY_ASSOCIATION);
     EXPECT_EQ(le16toh(hdr->length), size - sizeof(struct pldm_pdr_hdr));
     start += sizeof(pldm_pdr_hdr);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     containerId = reinterpret_cast<uint16_t*>(start);
     EXPECT_EQ(le16toh(*containerId), 4u);
     start += sizeof(uint16_t);
     EXPECT_EQ(*start, PLDM_ENTITY_ASSOCIAION_LOGICAL);
     start += sizeof(uint8_t);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     entity = reinterpret_cast<pldm_entity*>(start);
     EXPECT_EQ(le16toh(entity->entity_type), 5u);
     EXPECT_EQ(le16toh(entity->entity_instance_num), 1u);
@@ -1414,7 +1368,6 @@ TEST(EntityAssociationPDR, testPDR)
     EXPECT_EQ(*start, pldm_entity_get_num_children(
                           l3b, PLDM_ENTITY_ASSOCIAION_LOGICAL));
     start += sizeof(uint8_t);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     entity = reinterpret_cast<pldm_entity*>(start);
     EXPECT_EQ(le16toh(entity->entity_type), 7u);
     EXPECT_EQ(le16toh(entity->entity_instance_num), 1u);
@@ -1511,12 +1464,9 @@ TEST(EntityAssociationPDR, testFind)
     pldm_entity_association_tree_destroy(tree);
 }
 
-#ifdef LIBPLDM_API_TESTING
 TEST(EntityAssociationPDR, testCopyTree)
 {
     pldm_entity entities[4]{};
-    int rc;
-
     entities[0].entity_type = 1;
     entities[1].entity_type = 2;
     entities[2].entity_type = 2;
@@ -1542,8 +1492,7 @@ TEST(EntityAssociationPDR, testCopyTree)
     pldm_entity_association_tree_visit(orgTree, &orgOut, &orgNum);
     EXPECT_EQ(orgNum, 4u);
 
-    rc = pldm_entity_association_tree_copy_root_check(orgTree, newTree);
-    ASSERT_EQ(rc, 0);
+    pldm_entity_association_tree_copy_root(orgTree, newTree);
     size_t newNum{};
     pldm_entity* newOut = nullptr;
     pldm_entity_association_tree_visit(newTree, &newOut, &newNum);
@@ -1556,21 +1505,18 @@ TEST(EntityAssociationPDR, testCopyTree)
     pldm_entity_association_tree_destroy(orgTree);
     pldm_entity_association_tree_destroy(newTree);
 }
-#endif
 
 TEST(EntityAssociationPDR, testExtract)
 {
     std::vector<uint8_t> pdr{};
     pdr.resize(sizeof(pldm_pdr_hdr) + sizeof(pldm_pdr_entity_association) +
-               sizeof(pldm_entity) * 5);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+               sizeof(pldm_entity) * 4);
     pldm_pdr_hdr* hdr = reinterpret_cast<pldm_pdr_hdr*>(pdr.data());
     hdr->type = PLDM_PDR_ENTITY_ASSOCIATION;
     hdr->length =
-        htole16(sizeof(pldm_pdr_entity_association) + sizeof(pldm_entity) * 5);
+        htole16(sizeof(pldm_pdr_entity_association) + sizeof(pldm_entity) * 4);
 
     pldm_pdr_entity_association* e =
-        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
         reinterpret_cast<pldm_pdr_entity_association*>(pdr.data() +
                                                        sizeof(pldm_pdr_hdr));
     e->container_id = htole16(1);
@@ -1918,14 +1864,12 @@ TEST(EntityAssociationPDR, testNodeAddCheck)
     outData = nullptr;
     auto hdl1 = pldm_pdr_find_record(repo, 2, &outData, &size, &nextRecHdl);
     EXPECT_NE(hdl1, nullptr);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     pldm_pdr_hdr* hdr = reinterpret_cast<pldm_pdr_hdr*>(outData);
     EXPECT_EQ(hdr->record_handle, 2);
 
     outData = nullptr;
     auto hdl2 = pldm_pdr_find_record(repo, 23, &outData, &size, &nextRecHdl);
     EXPECT_NE(hdl2, nullptr);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     pldm_pdr_hdr* hdr1 = reinterpret_cast<pldm_pdr_hdr*>(outData);
     EXPECT_EQ(hdr1->record_handle, 23);
 
@@ -1938,10 +1882,8 @@ TEST(EntityAssociationPDR, testNodeAddCheck)
     pldm_entity_association_tree_destroy(tree);
 }
 
-#ifdef LIBPLDM_API_TESTING
 TEST(EntityAssociationPDR, testAddContainedEntityRemotePDR)
 {
-    // pldm_entity entities[5]{};
     pldm_entity* entities = (pldm_entity*)malloc(sizeof(pldm_entity) * 5);
     entities[0].entity_type = 1;
     entities[1].entity_type = 2;
@@ -1995,12 +1937,9 @@ TEST(EntityAssociationPDR, testAddContainedEntityRemotePDR)
     pldm_pdr_destroy(repo);
     pldm_entity_association_tree_destroy(tree);
 }
-#endif
 
-#ifdef LIBPLDM_API_TESTING
 TEST(EntityAssociationPDR, testAddContainedEntityNew)
 {
-    // pldm_entity entities[5]{};
     pldm_entity* entities = (pldm_entity*)malloc(sizeof(pldm_entity) * 5);
     entities[0].entity_type = 1;
     entities[1].entity_type = 2;
@@ -2061,17 +2000,15 @@ TEST(EntityAssociationPDR, testAddContainedEntityNew)
     pldm_pdr_destroy(repo);
     pldm_entity_association_tree_destroy(tree);
 }
-#endif
 
-#ifdef LIBPLDM_API_TESTING
 TEST(EntityAssociationPDR, testRemoveContainedEntity)
 {
-    struct pldm_entity entities[4] = {
-        {.entity_type = 1, .entity_instance_num = 1, .entity_container_id = 2},
-        {.entity_type = 2, .entity_instance_num = 1, .entity_container_id = 2},
-        {.entity_type = 3, .entity_instance_num = 3, .entity_container_id = 3},
-        {.entity_type = 4, .entity_instance_num = 1, .entity_container_id = 2}};
-    struct pldm_entity* base = entities;
+    pldm_entity* entities = (pldm_entity*)malloc(sizeof(pldm_entity) * 3);
+    entities[0].entity_type = 1;
+    entities[1].entity_type = 2;
+    entities[2].entity_type = 3;
+    entities[1].entity_container_id = 2;
+    entities[1].entity_instance_num = 1;
 
     auto tree = pldm_entity_association_tree_init();
     auto l1 = pldm_entity_association_tree_add_entity(
@@ -2087,120 +2024,33 @@ TEST(EntityAssociationPDR, testRemoveContainedEntity)
         tree, &entities[2], 0xffff, l1, PLDM_ENTITY_ASSOCIAION_PHYSICAL, false,
         true, 0xffff);
     EXPECT_NE(l3, nullptr);
-    auto l4 = pldm_entity_association_tree_add_entity(
-        tree, &entities[3], 0xffff, l1, PLDM_ENTITY_ASSOCIAION_PHYSICAL, false,
-        true, 0xffff);
-    EXPECT_NE(l4, nullptr);
 
     EXPECT_EQ(pldm_entity_get_num_children(l1, PLDM_ENTITY_ASSOCIAION_PHYSICAL),
-              3);
+              2);
 
     auto repo = pldm_pdr_init();
 
     EXPECT_EQ(pldm_entity_association_pdr_add_from_node_with_record_handle(
-                  l1, repo, &base, 4, false, 1, 3),
+                  l1, repo, &entities, 3, false, 1, 3),
               0);
 
     EXPECT_EQ(pldm_pdr_get_record_count(repo), 1u);
 
-    // Remove first contained entity from the entity association PDR
     uint32_t removed_record_handle{};
-    struct pldm_entity entity[1] = {
-        {.entity_type = 4, .entity_instance_num = 1, .entity_container_id = 2}};
+    pldm_entity entity{};
+    entity.entity_type = 2;
+    entity.entity_instance_num = 1;
+    entity.entity_container_id = 2;
 
     EXPECT_EQ(pldm_entity_association_pdr_remove_contained_entity(
-                  repo, entity, false, &removed_record_handle),
+                  repo, &entity, false, &removed_record_handle),
               0);
     EXPECT_EQ(removed_record_handle, 3);
 
-    // Remove second contained entity from the entity association PDR
-    removed_record_handle = 0;
-    EXPECT_EQ(pldm_entity_association_pdr_remove_contained_entity(
-                  repo, &entities[1], false, &removed_record_handle),
-              0);
-    EXPECT_EQ(removed_record_handle, 3);
-
-    // Remove third contained entity from the entity association PDR
-    removed_record_handle = 0;
-    EXPECT_EQ(pldm_entity_association_pdr_remove_contained_entity(
-                  repo, &entities[2], false, &removed_record_handle),
-              0);
-    EXPECT_EQ(removed_record_handle, 3);
-
-    // As all the contained entities are removed the entity association PDR
-    // also gets deleted
-    EXPECT_EQ(pldm_pdr_get_record_count(repo), 0u);
-
+    free(entities);
     pldm_pdr_destroy(repo);
     pldm_entity_association_tree_destroy(tree);
 }
-#endif
-
-#ifdef LIBPLDM_API_TESTING
-TEST(PDRUpdate, testRemoveFruRecord)
-{
-    auto repo = pldm_pdr_init();
-
-    uint32_t record_handle = 1;
-    int rc = pldm_pdr_add_fru_record_set(repo, 1, 1, 1, 0, 100, &record_handle);
-    EXPECT_EQ(rc, 0);
-    record_handle = 2;
-    rc = pldm_pdr_add_fru_record_set(repo, 1, 2, 1, 1, 100, &record_handle);
-    EXPECT_EQ(rc, 0);
-    record_handle = 3;
-    rc = pldm_pdr_add_fru_record_set(repo, 1, 3, 1, 2, 100, &record_handle);
-    EXPECT_EQ(rc, 0);
-    EXPECT_EQ(pldm_pdr_get_record_count(repo), 3);
-
-    uint32_t removed_record_handle{};
-    rc = pldm_pdr_remove_fru_record_set_by_rsi(repo, 2, false,
-                                               &removed_record_handle);
-    EXPECT_EQ(rc, 0);
-    EXPECT_EQ(removed_record_handle, 2);
-    EXPECT_EQ(pldm_pdr_get_record_count(repo), 2);
-
-    uint16_t terminusHdl{};
-    uint16_t entityType{};
-    uint16_t entityInstanceNum{};
-    uint16_t containerId{};
-    auto record = pldm_pdr_fru_record_set_find_by_rsi(
-        repo, 1, &terminusHdl, &entityType, &entityInstanceNum, &containerId);
-    EXPECT_NE(record, nullptr);
-    record_handle = pldm_pdr_get_record_handle(repo, record);
-    EXPECT_EQ(record_handle, 1);
-
-    record = pldm_pdr_fru_record_set_find_by_rsi(
-        repo, 3, &terminusHdl, &entityType, &entityInstanceNum, &containerId);
-    EXPECT_NE(record, nullptr);
-    record_handle = pldm_pdr_get_record_handle(repo, record);
-    EXPECT_EQ(record_handle, 3);
-
-    record = pldm_pdr_fru_record_set_find_by_rsi(
-        repo, 2, &terminusHdl, &entityType, &entityInstanceNum, &containerId);
-    EXPECT_EQ(record, nullptr);
-
-    rc = pldm_pdr_remove_fru_record_set_by_rsi(repo, 1, false,
-                                               &removed_record_handle);
-    EXPECT_EQ(rc, 0);
-    EXPECT_EQ(removed_record_handle, 1);
-
-    // remove the same record again
-    removed_record_handle = 5;
-    rc = pldm_pdr_remove_fru_record_set_by_rsi(repo, 1, false,
-                                               &removed_record_handle);
-    EXPECT_EQ(rc, 0);
-    EXPECT_NE(removed_record_handle, 1);
-    EXPECT_EQ(removed_record_handle, 5);
-
-    rc = pldm_pdr_remove_fru_record_set_by_rsi(repo, 3, false,
-                                               &removed_record_handle);
-    EXPECT_EQ(rc, 0);
-    EXPECT_EQ(removed_record_handle, 3);
-
-    EXPECT_EQ(pldm_pdr_get_record_count(repo), 0);
-    pldm_pdr_destroy(repo);
-}
-#endif
 
 TEST(EntityAssociationPDR, testfindParentEntityPresent)
 {
@@ -2262,5 +2112,58 @@ TEST(EntityAssociationPDR, testfindParentEntityPresent)
               0);
     EXPECT_EQ(found, false);
 
+    pldm_pdr_destroy(repo);
+}
+
+TEST(PDRUpdate, testRemoveFruRecord)
+{
+    auto repo = pldm_pdr_init();
+    uint32_t record_handle = 1;
+    EXPECT_EQ(pldm_pdr_add_fru_record_set_check(repo, 1, 1, 1, 0, 100,
+                                                &record_handle),
+              0);
+    record_handle = 2;
+    EXPECT_EQ(pldm_pdr_add_fru_record_set_check(repo, 1, 2, 1, 1, 100,
+                                                &record_handle),
+              0);
+    record_handle = 3;
+    EXPECT_EQ(pldm_pdr_add_fru_record_set_check(repo, 1, 3, 1, 2, 100,
+                                                &record_handle),
+              0);
+    EXPECT_EQ(pldm_pdr_get_record_count(repo), 3);
+    uint32_t removed_record_handle{};
+    EXPECT_EQ(pldm_pdr_remove_fru_record_set_by_rsi(repo, 2, false,
+                                                    &removed_record_handle),
+              0);
+    EXPECT_EQ(removed_record_handle, 2);
+    EXPECT_EQ(pldm_pdr_get_record_count(repo), 2);
+    uint16_t terminusHdl{};
+    uint16_t entityType{};
+    uint16_t entityInstanceNum{};
+    uint16_t containerId{};
+    EXPECT_EQ(1, pldm_pdr_get_record_handle(
+                     repo, pldm_pdr_fru_record_set_find_by_rsi(
+                               repo, 1, &terminusHdl, &entityType,
+                               &entityInstanceNum, &containerId)));
+    EXPECT_EQ(3, pldm_pdr_get_record_handle(
+                     repo, pldm_pdr_fru_record_set_find_by_rsi(
+                               repo, 3, &terminusHdl, &entityType,
+                               &entityInstanceNum, &containerId)));
+    EXPECT_EQ(nullptr, pldm_pdr_fru_record_set_find_by_rsi(
+                           repo, 2, &terminusHdl, &entityType,
+                           &entityInstanceNum, &containerId));
+    auto record = pldm_pdr_fru_record_set_find_by_rsi(
+        repo, 1, &terminusHdl, &entityType, &entityInstanceNum, &containerId);
+    EXPECT_NE(record, nullptr);
+    record = pldm_pdr_fru_record_set_find_by_rsi(
+        repo, 3, &terminusHdl, &entityType, &entityInstanceNum, &containerId);
+    EXPECT_NE(record, nullptr);
+    EXPECT_EQ(pldm_pdr_remove_fru_record_set_by_rsi(repo, 1, false,
+                                                    &removed_record_handle),
+              0);
+    EXPECT_EQ(pldm_pdr_remove_fru_record_set_by_rsi(repo, 3, false,
+                                                    &removed_record_handle),
+              0);
+    EXPECT_EQ(pldm_pdr_get_record_count(repo), 0);
     pldm_pdr_destroy(repo);
 }
