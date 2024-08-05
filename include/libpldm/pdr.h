@@ -320,6 +320,16 @@ enum entity_association_containment_type {
 	PLDM_ENTITY_ASSOCIAION_LOGICAL = 0x1,
 };
 
+/** @brief Get the entity using its record handle
+ *
+ *  @param[in] repo - opaque pointer acting as a PDR repo handle
+ *  @param[in] record_handle - record handle of input PDR record
+ *
+ *  @return pldm entity 
+ */
+pldm_entity pldm_get_entity_from_record_handle(const pldm_pdr *repo,
+					       uint32_t record_handle);
+
 /** @struct pldm_entity_association_tree
  *  opaque structure that represents the entity association hierarchy
  */
