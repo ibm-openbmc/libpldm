@@ -501,6 +501,122 @@ TEST(PDRAccess, testGetNext)
     pldm_pdr_destroy(repo);
 }
 
+uint32_t record_handle;
+uint32_t size;
+uint8_t* data;
+struct pldm_pdr_record* next;
+bool is_remote;
+uint16_t terminus_handle;
+
+TEST(FindContainerID, testValidInstanceID)
+{
+    auto repo = pldm_pdr_init();
+    ASSERT_NE(repo, nullptr);
+
+    size_t size = sizeof(struct pldm_pdr_hdr) +
+                  sizeof(struct pldm_pdr_entity_association);
+    std::unique_ptr<uint8_t[]> data(new uint8_t[size]);
+    ASSERT_NE(data, nullptr);
+
+    struct pldm_pdr_hdr* hdr =
+        reinterpret_cast<struct pldm_pdr_hdr*>(data.get());
+    hdr->type = PLDM_PDR_ENTITY_ASSOCIATION;
+    hdr->length = size - sizeof(struct pldm_pdr_hdr);
+
+    struct pldm_pdr_entity_association* pdr =
+        reinterpret_cast<struct pldm_pdr_entity_association*>(
+            data.get() + sizeof(struct pldm_pdr_hdr));
+    pdr->container.entity_type = 1;
+    pdr->container.entity_instance_num = 2;
+    pdr->num_children = 1;
+    pdr->children[0].entity_container_id = 42;
+
+    uint32_t record_handle;
+    int rc =
+        pldm_pdr_add_check(repo, data.get(), size, false, 0, &record_handle);
+    ASSERT_EQ(rc, 0);
+
+    uint16_t result = pldm_find_container_id(repo, 1, 2);
+    EXPECT_EQ(result, 42);
+
+    pldm_pdr_destroy(repo);
+}
+
+TEST(FindContainerID, testInvalidInstanceID)
+{
+    auto repo = pldm_pdr_init();
+    ASSERT_NE(repo, nullptr);
+
+    size_t size = sizeof(struct pldm_pdr_hdr) +
+                  sizeof(struct pldm_pdr_entity_association);
+    std::unique_ptr<uint8_t[]> data(new uint8_t[size]);
+    ASSERT_NE(data, nullptr);
+
+    struct pldm_pdr_hdr* hdr =
+        reinterpret_cast<struct pldm_pdr_hdr*>(data.get());
+    hdr->type = PLDM_PDR_ENTITY_ASSOCIATION;
+    hdr->length = size - sizeof(struct pldm_pdr_hdr);
+
+    struct pldm_pdr_entity_association* pdr =
+        reinterpret_cast<struct pldm_pdr_entity_association*>(
+            data.get() + sizeof(struct pldm_pdr_hdr));
+    pdr->container.entity_type = 1;
+    pdr->container.entity_instance_num = 2;
+    pdr->num_children = 1;
+    pdr->children[0].entity_container_id = 42;
+
+    uint32_t record_handle;
+    int rc =
+        pldm_pdr_add_check(repo, data.get(), size, false, 0, &record_handle);
+    ASSERT_EQ(rc, 0);
+
+    uint16_t result = pldm_find_container_id(repo, 3, 4);
+    EXPECT_EQ(result, 0);
+    pldm_pdr_destroy(repo);
+}
+
+TEST(UpdateContainerID, testUpdatedContainerId)
+{
+    auto repo = pldm_pdr_init();
+    ASSERT_NE(repo, nullptr);
+
+    constexpr size_t hdr_size = sizeof(struct pldm_pdr_hdr);
+    constexpr size_t pdr_size = sizeof(struct pldm_numeric_effecter_value_pdr);
+    constexpr size_t total_size = hdr_size + pdr_size;
+
+    std::array<uint8_t, total_size> data{};
+    auto hdr = reinterpret_cast<struct pldm_pdr_hdr*>(data.data());
+    hdr->type = PLDM_NUMERIC_EFFECTER_PDR;
+    hdr->length = total_size - hdr_size;
+
+    auto pdr =
+        reinterpret_cast<struct pldm_numeric_effecter_value_pdr*>(data.data());
+    pdr->container_id = 42;
+    pdr->effecter_id = 3;
+
+    uint32_t record_handle = 1;
+    int rc = pldm_pdr_add_check(repo, data.data(), pdr_size, false, 1,
+                                &record_handle);
+    ASSERT_EQ(rc, 0);
+    EXPECT_EQ(pldm_pdr_get_record_count(repo), 1u);
+
+    uint16_t new_container_id = 7;
+    pldm_change_container_id_of_effecter(repo, pdr->effecter_id,
+                                         new_container_id);
+
+    uint8_t* check_data = nullptr;
+    uint32_t check_size{};
+    auto check_record = pldm_pdr_find_record_by_type(repo, 9, nullptr,
+                                                     &check_data, &check_size);
+    ASSERT_NE(check_record, nullptr);
+
+    const auto* check_pdr =
+        reinterpret_cast<const pldm_numeric_effecter_value_pdr*>(check_data);
+
+    EXPECT_EQ(check_pdr->container_id, new_container_id);
+    pldm_pdr_destroy(repo);
+}
+
 TEST(PDRAccess, testFindByType)
 {
     auto repo = pldm_pdr_init();
