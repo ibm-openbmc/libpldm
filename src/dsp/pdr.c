@@ -2209,9 +2209,6 @@ static int pldm_entity_association_find_record_hndl_by_entity(
 	if (!repo || !entity) {
 		return -EINVAL;
 	}
-	uint16_t entity_type = 0;
-	uint16_t entity_instance_num = 0;
-	uint16_t entity_container_id = 0;
 	uint8_t num_children = 0;
 	uint8_t hdr_type = 0;
 	int rc = 0;
@@ -2240,6 +2237,9 @@ static int pldm_entity_association_find_record_hndl_by_entity(
 			}
 			pldm_msgbuf_extract(dst, num_children);
 			for (int i = 0; i < num_children; ++i) {
+				uint16_t entity_type = 0;
+				uint16_t entity_instance_num = 0;
+				uint16_t entity_container_id = 0;
 				pldm_msgbuf_extract(dst, entity_type);
 				pldm_msgbuf_extract(dst, entity_instance_num);
 				pldm_msgbuf_extract(dst, entity_container_id);
@@ -2342,7 +2342,7 @@ int pldm_entity_association_pdr_remove_contained_entity(
 	pldm_msgbuf_copy(dst, src, uint16_t, entity_type);
 	pldm_msgbuf_copy(dst, src, uint16_t, entity_instance_num);
 	pldm_msgbuf_copy(dst, src, uint16_t, entity_container_id);
-	// extract value of number of children from record and increment it
+	// extract value of number of children from record and decrement it
 	// by 1 before insert the value to new record.
 	rc = pldm_msgbuf_extract(src, num_children);
 	if (rc) {
@@ -2359,20 +2359,20 @@ int pldm_entity_association_pdr_remove_contained_entity(
 	}
 	num_children -= 1;
 	pldm_msgbuf_insert(dst, num_children);
-	//Add all children of original PDR to new PDR
-	for (int i = 0; i < num_children - 1; i++) {
+	//Add all children of original PDR to new PDR except the
+	//removed entity one
+	for (int i = 0; i < num_children + 1; ++i) {
 		pldm_msgbuf_extract(src, entity_type);
 		pldm_msgbuf_extract(src, entity_instance_num);
 		pldm_msgbuf_extract(src, entity_container_id);
-		if (entity_type != entity->entity_type &&
-		    entity_instance_num != entity->entity_instance_num &&
-		    entity_container_id != entity->entity_container_id) {
-			pldm_msgbuf_copy(dst, src, uint16_t, child_entity_type);
-			pldm_msgbuf_copy(dst, src, uint16_t,
-					 child_entity_instance_num);
-			pldm_msgbuf_copy(dst, src, uint16_t,
-					 child_entity_container_id);
+		if (entity_type == entity->entity_type &&
+		    entity_instance_num == entity->entity_instance_num &&
+		    entity_container_id == entity->entity_container_id) {
+			continue;
 		}
+		pldm_msgbuf_insert(dst, entity_type);
+		pldm_msgbuf_insert(dst, entity_instance_num);
+		pldm_msgbuf_insert(dst, entity_container_id);
 	}
 	rc = pldm_msgbuf_destroy(src);
 	if (rc) {
