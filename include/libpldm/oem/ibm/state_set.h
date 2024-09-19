@@ -82,6 +82,11 @@ enum ibm_oem_pldm_state_set_boot_side_rename_state_values {
 	PLDM_BOOT_SIDE_HAS_BEEN_RENAMED = 2,
 };
 
+enum pldm_oem_pcie_topology_actions {
+	GET_PCIE_TOPOLOGY = 0x1,
+	GET_CABLE_INFO = 0x2,
+	SAVE_PCIE_TOPLOGY = 0x3,
+};
 #ifdef __cplusplus
 }
 #endif
