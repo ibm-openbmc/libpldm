@@ -238,10 +238,14 @@ int pldm_pdr_find_child_container_id_index_range_exclude(
  *  @param[in] repo - opaque pointer acting as a PDR repo handle
  *  @param[in] entityType - entity type
  *  @param[in] entityInstance - instance of the entity
+ *  @param[in] first_record_handle - record handle range start
+ *  @param[in] last_record_handle - record handle range end
  *  @return container id present in entity association pdr for corresponding entity type and entity instance
  */
 uint16_t pldm_find_container_id(const pldm_pdr *repo, uint16_t entityType,
-				uint16_t entityInstance);
+				uint16_t entityInstance,
+				uint32_t first_record_handle,
+				uint32_t last_record_handle);
 
 /** @brief update the container id of an effecter
  *

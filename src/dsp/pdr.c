@@ -588,7 +588,9 @@ int pldm_pdr_find_child_container_id_index_range_exclude(
 
 LIBPLDM_ABI_STABLE
 uint16_t pldm_find_container_id(const pldm_pdr *repo, uint16_t entityType,
-				uint16_t entityInstance)
+				uint16_t entityInstance,
+				uint32_t first_record_handle,
+				uint32_t last_record_handle)
 {
 	assert(repo != NULL);
 
@@ -596,7 +598,10 @@ uint16_t pldm_find_container_id(const pldm_pdr *repo, uint16_t entityType,
 
 	while (record != NULL) {
 		struct pldm_pdr_hdr *hdr = (struct pldm_pdr_hdr *)record->data;
-		if (hdr->type == PLDM_PDR_ENTITY_ASSOCIATION) {
+		if (hdr->type == PLDM_PDR_ENTITY_ASSOCIATION &&
+		    !(pldm_record_handle_in_range(record->record_handle,
+						  first_record_handle,
+						  last_record_handle))) {
 			struct pldm_pdr_entity_association *pdr =
 				(struct pldm_pdr_entity_association
 					 *)((uint8_t *)record->data +
