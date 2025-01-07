@@ -2302,6 +2302,21 @@ TEST(EntityAssociationPDR, testRemoveContainedEntity)
     EXPECT_EQ(pldm_entity_get_num_children(l1, PLDM_ENTITY_ASSOCIAION_PHYSICAL),
               1);
 
+    removed_record_handle = 0;
+    entity.entity_type = 3;
+    entity.entity_instance_num = 1;
+    entity.entity_container_id = 2;
+
+    EXPECT_EQ(pldm_entity_association_pdr_remove_contained_entity(
+                  repo, &entity, false, &removed_record_handle),
+              0);
+    EXPECT_EQ(removed_record_handle, 3);
+
+    pldm_entity_association_tree_delete_node(tree, entity);
+
+    EXPECT_EQ(pldm_entity_get_num_children(l1, PLDM_ENTITY_ASSOCIAION_PHYSICAL),
+              0);
+    EXPECT_EQ(pldm_pdr_get_record_count(repo), 0u);
     free(entities);
     pldm_pdr_destroy(repo);
     pldm_entity_association_tree_destroy(tree);
