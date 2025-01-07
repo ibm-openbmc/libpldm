@@ -388,6 +388,14 @@ typedef struct pldm_entity_node pldm_entity_node;
  */
 pldm_entity_association_tree *pldm_entity_association_tree_init(void);
 
+/** @brief Next Container ID from the association tree
+ *
+ *  @param[in] tree - opaque pointer acting as a handle to the tree
+ *
+ *  @return next container id - container id of the entity
+ */
+uint16_t next_container_id(pldm_entity_association_tree *tree);
+
 /** @brief Add a local entity into the entity association tree
  *
  *  @param[in/out] tree - opaque pointer acting as a handle to the tree

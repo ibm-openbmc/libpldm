@@ -660,7 +660,8 @@ typedef struct pldm_entity_node {
 	uint8_t association_type;
 } pldm_entity_node;
 
-static inline uint16_t next_container_id(pldm_entity_association_tree *tree)
+LIBPLDM_ABI_STABLE
+uint16_t next_container_id(pldm_entity_association_tree *tree)
 {
 	assert(tree != NULL);
 	assert(tree->last_used_container_id != UINT16_MAX);
