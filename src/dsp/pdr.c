@@ -724,6 +724,15 @@ typedef struct pldm_entity_node {
 } pldm_entity_node;
 
 LIBPLDM_ABI_STABLE
+uint16_t next_container_id(pldm_entity_association_tree *tree)
+{
+	assert(tree != NULL);
+	assert(tree->last_used_container_id != UINT16_MAX);
+
+	return ++tree->last_used_container_id;
+}
+
+LIBPLDM_ABI_STABLE
 pldm_entity pldm_entity_extract(pldm_entity_node *node)
 {
 	assert(node != NULL);
