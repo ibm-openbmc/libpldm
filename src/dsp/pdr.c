@@ -1,10 +1,12 @@
 /* SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later */
+#include "compiler.h"
 #include "msgbuf.h"
 #include <libpldm/pdr.h>
 #include <libpldm/platform.h>
 
 #include <assert.h>
 #include <endian.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
@@ -12,6 +14,9 @@
 #define PDR_ENTITY_ASSOCIATION_MIN_SIZE                                        \
 	(sizeof(struct pldm_pdr_hdr) +                                         \
 	 sizeof(struct pldm_pdr_entity_association))
+
+#define PDR_FRU_RECORD_SET_MIN_SIZE                                            \
+	(sizeof(struct pldm_pdr_hdr) + sizeof(struct pldm_pdr_fru_record_set))
 
 typedef struct pldm_pdr_record {
 	uint32_t record_handle;
@@ -29,12 +34,18 @@ typedef struct pldm_pdr {
 	pldm_pdr_record *last;
 } pldm_pdr;
 
+LIBPLDM_CC_NONNULL
+static pldm_pdr_record *pldm_pdr_get_prev_record(pldm_pdr *repo,
+						 pldm_pdr_record *record);
+
+LIBPLDM_CC_NONNULL_ARGS(1, 2)
+static int pldm_pdr_remove_record(pldm_pdr *repo, pldm_pdr_record *record,
+				  pldm_pdr_record *prev);
+
+LIBPLDM_CC_NONNULL
 static inline uint32_t get_next_record_handle(const pldm_pdr *repo,
 					      const pldm_pdr_record *record)
 {
-	assert(repo != NULL);
-	assert(record != NULL);
-
 	if (record == repo->last) {
 		return 0;
 	}
@@ -42,11 +53,11 @@ static inline uint32_t get_next_record_handle(const pldm_pdr *repo,
 }
 
 LIBPLDM_ABI_STABLE
-int pldm_pdr_add_check(pldm_pdr *repo, const uint8_t *data, uint32_t size,
-		       bool is_remote, uint16_t terminus_handle,
-		       uint32_t *record_handle)
+int pldm_pdr_add(pldm_pdr *repo, const uint8_t *data, uint32_t size,
+		 bool is_remote, uint16_t terminus_handle,
+		 uint32_t *record_handle)
 {
-	uint32_t curr;
+	uint32_t curr = 0;
 
 	if (!repo || !data || !size) {
 		return -EINVAL;
@@ -253,8 +264,7 @@ uint32_t pldm_pdr_get_repo_size(const pldm_pdr *repo)
 }
 
 LIBPLDM_ABI_STABLE
-uint32_t pldm_pdr_get_record_handle(const pldm_pdr *repo
-				    __attribute__((unused)),
+uint32_t pldm_pdr_get_record_handle(const pldm_pdr *repo LIBPLDM_CC_UNUSED,
 				    const pldm_pdr_record *record)
 {
 	assert(repo != NULL);
@@ -263,9 +273,8 @@ uint32_t pldm_pdr_get_record_handle(const pldm_pdr *repo
 	return record->record_handle;
 }
 
-LIBPLDM_ABI_DEPRECATED
-uint16_t pldm_pdr_get_terminus_handle(const pldm_pdr *repo
-				      __attribute__((unused)),
+LIBPLDM_ABI_TESTING
+uint16_t pldm_pdr_get_terminus_handle(const pldm_pdr *repo LIBPLDM_CC_UNUSED,
 				      const pldm_pdr_record *record)
 {
 	assert(repo != NULL);
@@ -283,19 +292,18 @@ bool pldm_pdr_record_is_remote(const pldm_pdr_record *record)
 }
 
 LIBPLDM_ABI_STABLE
-int pldm_pdr_add_fru_record_set_check(pldm_pdr *repo, uint16_t terminus_handle,
-				      uint16_t fru_rsi, uint16_t entity_type,
-				      uint16_t entity_instance_num,
-				      uint16_t container_id,
-				      uint32_t *bmc_record_handle)
+int pldm_pdr_add_fru_record_set(pldm_pdr *repo, uint16_t terminus_handle,
+				uint16_t fru_rsi, uint16_t entity_type,
+				uint16_t entity_instance_num,
+				uint16_t container_id,
+				uint32_t *bmc_record_handle)
 {
 	if (!repo || !bmc_record_handle) {
 		return -EINVAL;
 	}
 
-	uint32_t size = sizeof(struct pldm_pdr_hdr) +
-			sizeof(struct pldm_pdr_fru_record_set);
-	uint8_t data[size];
+	uint8_t data[sizeof(struct pldm_pdr_hdr) +
+		     sizeof(struct pldm_pdr_fru_record_set)];
 
 	struct pldm_pdr_hdr *hdr = (struct pldm_pdr_hdr *)&data;
 	hdr->version = 1;
@@ -312,8 +320,8 @@ int pldm_pdr_add_fru_record_set_check(pldm_pdr *repo, uint16_t terminus_handle,
 	fru->entity_instance_num = htole16(entity_instance_num);
 	fru->container_id = htole16(container_id);
 
-	return pldm_pdr_add_check(repo, data, size, false, terminus_handle,
-				  bmc_record_handle);
+	return pldm_pdr_add(repo, data, sizeof(data), false, terminus_handle,
+			    bmc_record_handle);
 }
 
 LIBPLDM_ABI_STABLE
@@ -340,47 +348,6 @@ const pldm_pdr_record *pldm_pdr_fru_record_set_find_by_rsi(
 			*entity_type = le16toh(fru->entity_type);
 			*entity_instance_num =
 				le16toh(fru->entity_instance_num);
-			*container_id = le16toh(fru->container_id);
-			return curr_record;
-		}
-		data = NULL;
-		curr_record = pldm_pdr_find_record_by_type(
-			repo, PLDM_PDR_FRU_RECORD_SET, curr_record, &data,
-			&size);
-	}
-
-	*terminus_handle = 0;
-	*entity_type = 0;
-	*entity_instance_num = 0;
-	*container_id = 0;
-
-	return NULL;
-}
-
-LIBPLDM_ABI_STABLE
-const pldm_pdr_record *pldm_pdr_fru_record_find_by_rsi(
-	const pldm_pdr *repo, uint16_t fru_rsi, uint16_t *terminus_handle,
-	uint16_t *entity_type, uint16_t *entity_instance_num,
-	uint16_t *container_id, bool is_remote)
-{
-	if (!repo || !terminus_handle || !entity_type || !entity_instance_num ||
-	    !container_id) {
-		return NULL;
-	}
-
-	uint8_t *data = NULL;
-	uint32_t size = 0;
-	const pldm_pdr_record *curr_record = pldm_pdr_find_record_by_type(
-		repo, PLDM_PDR_FRU_RECORD_SET, NULL, &data, &size);
-	while (curr_record != NULL) {
-		struct pldm_pdr_fru_record_set *fru =
-			(struct pldm_pdr_fru_record_set
-				 *)(data + sizeof(struct pldm_pdr_hdr));
-		if (fru->fru_rsi == htole16(fru_rsi) &&
-		    curr_record->is_remote == is_remote) {
-			*terminus_handle = le16toh(fru->terminus_handle);
-			*entity_type = le16toh(fru->entity_type);
-			*entity_instance_num = le16toh(fru->entity_instance);
 			*container_id = le16toh(fru->container_id);
 			return curr_record;
 		}
@@ -426,103 +393,6 @@ void pldm_pdr_update_TL_pdr(const pldm_pdr *repo, uint16_t terminus_handle,
 						      PLDM_TERMINUS_LOCATOR_PDR,
 						      record, &out_data, &size);
 	} while (record);
-}
-
-LIBPLDM_ABI_STABLE
-void pldm_delete_by_record_handle(pldm_pdr *repo, uint32_t record_handle,
-				  bool is_remote)
-{
-	assert(repo != NULL);
-
-	pldm_pdr_record *record = repo->first;
-	pldm_pdr_record *prev = NULL;
-	while (record != NULL) {
-		pldm_pdr_record *next = record->next;
-		struct pldm_pdr_hdr *hdr = (struct pldm_pdr_hdr *)record->data;
-		if ((record->is_remote == is_remote) &&
-		    (hdr->record_handle == record_handle)) {
-			if (repo->first == record) {
-				repo->first = next;
-			} else {
-				prev->next = next;
-			}
-			if (repo->last == record) {
-				repo->last = prev;
-			}
-			if (record->data) {
-				free(record->data);
-			}
-			--repo->record_count;
-			repo->size -= record->size;
-			free(record);
-			break;
-		}
-		prev = record;
-		record = next;
-	}
-}
-
-LIBPLDM_ABI_STABLE
-pldm_entity pldm_get_entity_from_record_handle(const pldm_pdr *repo,
-					       uint32_t record_handle)
-{
-	assert(repo != NULL);
-	pldm_entity element = { 0, 0, 0 };
-
-	pldm_pdr_record *record = repo->first;
-
-	while (record != NULL) {
-		struct pldm_pdr_hdr *hdr = (struct pldm_pdr_hdr *)record->data;
-		if (hdr->record_handle == record_handle) {
-			switch (hdr->type) {
-			case (PLDM_PDR_FRU_RECORD_SET): {
-				struct pldm_pdr_fru_record_set *pdr =
-					(struct pldm_pdr_fru_record_set
-						 *)((uint8_t *)record->data +
-						    sizeof(struct pldm_pdr_hdr));
-				element.entity_type = pdr->entity_type;
-				element.entity_instance_num =
-					pdr->entity_instance;
-				element.entity_container_id = pdr->container_id;
-				return element;
-			}
-			case (PLDM_STATE_SENSOR_PDR): {
-				struct pldm_state_sensor_pdr *pdr =
-					(struct pldm_state_sensor_pdr
-						 *)((uint8_t *)record->data);
-				element.entity_type = pdr->entity_type;
-				element.entity_instance_num =
-					pdr->entity_instance;
-				element.entity_container_id = pdr->container_id;
-				return element;
-			}
-			case (PLDM_STATE_EFFECTER_PDR): {
-				struct pldm_state_effecter_pdr *pdr =
-					(struct pldm_state_effecter_pdr
-						 *)((uint8_t *)record->data);
-				element.entity_type = pdr->entity_type;
-				element.entity_instance_num =
-					pdr->entity_instance;
-				element.entity_container_id = pdr->container_id;
-				return element;
-			}
-			case (PLDM_NUMERIC_EFFECTER_PDR): {
-				struct pldm_numeric_effecter_value_pdr *pdr =
-					(struct pldm_numeric_effecter_value_pdr
-						 *)((uint8_t *)record->data);
-				element.entity_type = pdr->entity_type;
-				element.entity_instance_num =
-					pdr->entity_instance;
-				element.entity_container_id = pdr->container_id;
-				return element;
-			}
-			default:
-				break;
-			}
-		}
-		record = record->next;
-	}
-	return element;
 }
 
 static bool pldm_record_handle_in_range(uint32_t record_handle,
@@ -583,68 +453,7 @@ int pldm_pdr_find_child_container_id_index_range_exclude(
 			return 0;
 		}
 	}
-	return -ENOKEY;
-}
-
-LIBPLDM_ABI_STABLE
-uint16_t pldm_find_container_id(const pldm_pdr *repo, uint16_t entityType,
-				uint16_t entityInstance,
-				uint32_t first_record_handle,
-				uint32_t last_record_handle)
-{
-	assert(repo != NULL);
-
-	pldm_pdr_record *record = repo->first;
-
-	while (record != NULL) {
-		struct pldm_pdr_hdr *hdr = (struct pldm_pdr_hdr *)record->data;
-		if (hdr->type == PLDM_PDR_ENTITY_ASSOCIATION &&
-		    !(pldm_record_handle_in_range(record->record_handle,
-						  first_record_handle,
-						  last_record_handle))) {
-			struct pldm_pdr_entity_association *pdr =
-				(struct pldm_pdr_entity_association
-					 *)((uint8_t *)record->data +
-					    sizeof(struct pldm_pdr_hdr));
-			struct pldm_entity *child =
-				(struct pldm_entity *)(&pdr->children[0]);
-			for (int i = 0; i < pdr->num_children; ++i) {
-				if (pdr->container.entity_type == entityType &&
-				    pdr->container.entity_instance_num ==
-					    entityInstance) {
-					uint16_t id =
-						child->entity_container_id;
-					return id;
-				}
-			}
-		}
-		record = record->next;
-	}
-	return 0;
-}
-
-LIBPLDM_ABI_STABLE
-void pldm_change_container_id_of_effecter(const pldm_pdr *repo,
-					  uint16_t effecterId,
-					  uint16_t containerId)
-{
-	assert(repo != NULL);
-
-	pldm_pdr_record *record = repo->first;
-
-	while (record != NULL) {
-		struct pldm_pdr_hdr *hdr = (struct pldm_pdr_hdr *)record->data;
-		if (hdr->type == PLDM_NUMERIC_EFFECTER_PDR) {
-			struct pldm_numeric_effecter_value_pdr *pdr =
-				(struct pldm_numeric_effecter_value_pdr
-					 *)((uint8_t *)record->data);
-			if (pdr->effecter_id == effecterId) {
-				pdr->container_id = containerId;
-				break;
-			}
-		}
-		record = record->next;
-	}
+	return -ENOENT;
 }
 
 typedef struct pldm_entity_association_tree {
@@ -701,11 +510,10 @@ pldm_entity_association_tree *pldm_entity_association_tree_init(void)
 	return tree;
 }
 
+LIBPLDM_CC_NONNULL
 static pldm_entity_node *find_insertion_at(pldm_entity_node *start,
 					   uint16_t entity_type)
 {
-	assert(start != NULL);
-
 	/* Insert after the the last node that matches the input entity type, or
 	 * at the end if no such match occurs
 	 */
@@ -722,17 +530,6 @@ static pldm_entity_node *find_insertion_at(pldm_entity_node *start,
 	return start;
 }
 
-static void entity_association_tree_destroy(pldm_entity_node *node)
-{
-	if (node == NULL) {
-		return;
-	}
-
-	entity_association_tree_destroy(node->next_sibling);
-	entity_association_tree_destroy(node->first_child);
-	free(node);
-}
-
 LIBPLDM_ABI_STABLE
 pldm_entity_node *pldm_entity_association_tree_add(
 	pldm_entity_association_tree *tree, pldm_entity *entity,
@@ -743,44 +540,6 @@ pldm_entity_node *pldm_entity_association_tree_add(
 						       entity_instance_number,
 						       parent, association_type,
 						       false, true, 0xffff);
-}
-
-LIBPLDM_ABI_STABLE
-void pldm_entity_association_tree_delete_node(
-	pldm_entity_association_tree *tree, pldm_entity entity)
-{
-	pldm_entity_node *node = NULL;
-	pldm_find_entity_ref_in_tree(tree, entity, &node);
-	assert(node != NULL);
-	pldm_entity_node *parent = NULL;
-	pldm_find_entity_ref_in_tree(tree, node->parent, &parent);
-	assert(parent != NULL);
-	pldm_entity_node *start = parent->first_child;
-	pldm_entity_node *prev = parent->first_child;
-	while (start != NULL) {
-		pldm_entity current_entity;
-		current_entity.entity_type = start->entity.entity_type;
-		current_entity.entity_instance_num =
-			start->entity.entity_instance_num;
-		current_entity.entity_container_id =
-			start->entity.entity_container_id;
-		if (current_entity.entity_type == entity.entity_type &&
-		    current_entity.entity_instance_num ==
-			    entity.entity_instance_num &&
-		    current_entity.entity_container_id ==
-			    entity.entity_container_id) {
-			if (start == parent->first_child) {
-				parent->first_child = start->next_sibling;
-			} else {
-				prev->next_sibling = start->next_sibling;
-			}
-			start->next_sibling = NULL;
-			break;
-		}
-		prev = start;
-		start = start->next_sibling;
-	}
-	entity_association_tree_destroy(node);
 }
 
 LIBPLDM_ABI_STABLE
@@ -942,6 +701,17 @@ void pldm_entity_association_tree_visit(pldm_entity_association_tree *tree,
 	entity_association_tree_visit(tree->root, *entities, &index);
 }
 
+static void entity_association_tree_destroy(pldm_entity_node *node)
+{
+	if (node == NULL) {
+		return;
+	}
+
+	entity_association_tree_destroy(node->next_sibling);
+	entity_association_tree_destroy(node->first_child);
+	free(node);
+}
+
 LIBPLDM_ABI_STABLE
 void pldm_entity_association_tree_destroy(pldm_entity_association_tree *tree)
 {
@@ -972,7 +742,9 @@ pldm_entity pldm_entity_get_parent(pldm_entity_node *node)
 LIBPLDM_ABI_STABLE
 bool pldm_entity_is_exist_parent(pldm_entity_node *node)
 {
-	assert(node != NULL);
+	if (!node) {
+		return false;
+	}
 
 	if (node->parent.entity_type == 0 &&
 	    node->parent.entity_instance_num == 0 &&
@@ -1034,8 +806,16 @@ static int entity_association_pdr_add_children(
 	uint8_t contained_count, uint8_t association_type, bool is_remote,
 	uint16_t terminus_handle, uint32_t *record_handle)
 {
-	uint8_t pdr[size];
-	uint8_t *start = pdr;
+	uint8_t *start;
+	uint8_t *pdr;
+	int rc;
+
+	pdr = calloc(1, size);
+	if (!pdr) {
+		return -ENOMEM;
+	}
+
+	start = pdr;
 
 	struct pldm_pdr_hdr *hdr = (struct pldm_pdr_hdr *)start;
 	hdr->version = 1;
@@ -1074,8 +854,10 @@ static int entity_association_pdr_add_children(
 		node = node->next_sibling;
 	}
 
-	return pldm_pdr_add_check(repo, pdr, size, is_remote, terminus_handle,
-				  record_handle);
+	rc = pldm_pdr_add(repo, pdr, size, is_remote, terminus_handle,
+			  record_handle);
+	free(pdr);
+	return rc;
 }
 
 static int entity_association_pdr_add_entry(pldm_entity_node *curr,
@@ -1176,9 +958,9 @@ static int entity_association_pdr_add(pldm_entity_node *curr, pldm_pdr *repo,
 }
 
 LIBPLDM_ABI_STABLE
-int pldm_entity_association_pdr_add_check(pldm_entity_association_tree *tree,
-					  pldm_pdr *repo, bool is_remote,
-					  uint16_t terminus_handle)
+int pldm_entity_association_pdr_add(pldm_entity_association_tree *tree,
+				    pldm_pdr *repo, bool is_remote,
+				    uint16_t terminus_handle)
 {
 	if (!tree || !repo) {
 		return 0;
@@ -1189,7 +971,7 @@ int pldm_entity_association_pdr_add_check(pldm_entity_association_tree *tree,
 }
 
 LIBPLDM_ABI_STABLE
-int pldm_entity_association_pdr_add_from_node_check(
+int pldm_entity_association_pdr_add_from_node(
 	pldm_entity_node *node, pldm_pdr *repo, pldm_entity **entities,
 	size_t num_entities, bool is_remote, uint16_t terminus_handle)
 {
@@ -1259,6 +1041,8 @@ void pldm_pdr_remove_pdrs_by_terminus_handle(pldm_pdr *repo,
 		return;
 	}
 
+	bool removed = false;
+
 	pldm_pdr_record *record = repo->first;
 	pldm_pdr_record *prev = NULL;
 	while (record != NULL) {
@@ -1278,10 +1062,26 @@ void pldm_pdr_remove_pdrs_by_terminus_handle(pldm_pdr *repo,
 			--repo->record_count;
 			repo->size -= record->size;
 			free(record);
+			removed = true;
 		} else {
 			prev = record;
 		}
 		record = next;
+	}
+
+	if (removed == true) {
+		record = repo->first;
+		uint32_t record_handle = 0;
+		while (record != NULL) {
+			record->record_handle = ++record_handle;
+			if (record->data != NULL) {
+				struct pldm_pdr_hdr *hdr =
+					(struct pldm_pdr_hdr *)(record->data);
+				hdr->record_handle =
+					htole32(record->record_handle);
+			}
+			record = record->next;
+		}
 	}
 }
 
@@ -1433,26 +1233,49 @@ pldm_entity_association_tree_find(pldm_entity_association_tree *tree,
 	return node;
 }
 
-static void entity_association_tree_copy(pldm_entity_node *org_node,
-					 pldm_entity_node **new_node)
+static int entity_association_tree_copy(pldm_entity_node *org_node,
+					pldm_entity_node **new_node)
 {
+	int rc;
+
 	if (org_node == NULL) {
-		return;
+		return 0;
 	}
+
 	*new_node = malloc(sizeof(pldm_entity_node));
+	if (!*new_node) {
+		return -ENOMEM;
+	}
+
 	(*new_node)->parent = org_node->parent;
 	(*new_node)->entity = org_node->entity;
 	(*new_node)->association_type = org_node->association_type;
 	(*new_node)->remote_container_id = org_node->remote_container_id;
 	(*new_node)->first_child = NULL;
 	(*new_node)->next_sibling = NULL;
-	entity_association_tree_copy(org_node->first_child,
-				     &((*new_node)->first_child));
-	entity_association_tree_copy(org_node->next_sibling,
-				     &((*new_node)->next_sibling));
+
+	rc = entity_association_tree_copy(org_node->first_child,
+					  &((*new_node)->first_child));
+	if (rc) {
+		goto cleanup;
+	}
+
+	rc = entity_association_tree_copy(org_node->next_sibling,
+					  &((*new_node)->next_sibling));
+	if (rc) {
+		entity_association_tree_destroy((*new_node)->first_child);
+		goto cleanup;
+	}
+
+	return 0;
+
+cleanup:
+	free(*new_node);
+	*new_node = NULL;
+	return rc;
 }
 
-LIBPLDM_ABI_STABLE
+LIBPLDM_ABI_DEPRECATED_UNSAFE
 void pldm_entity_association_tree_copy_root(
 	pldm_entity_association_tree *org_tree,
 	pldm_entity_association_tree *new_tree)
@@ -1462,6 +1285,19 @@ void pldm_entity_association_tree_copy_root(
 
 	new_tree->last_used_container_id = org_tree->last_used_container_id;
 	entity_association_tree_copy(org_tree->root, &(new_tree->root));
+}
+
+LIBPLDM_ABI_TESTING
+int pldm_entity_association_tree_copy_root_check(
+	pldm_entity_association_tree *org_tree,
+	pldm_entity_association_tree *new_tree)
+{
+	if (!org_tree || !new_tree) {
+		return -EINVAL;
+	}
+
+	new_tree->last_used_container_id = org_tree->last_used_container_id;
+	return entity_association_tree_copy(org_tree->root, &(new_tree->root));
 }
 
 LIBPLDM_ABI_STABLE
@@ -1501,21 +1337,46 @@ void pldm_entity_association_pdr_extract(const uint8_t *pdr, uint16_t pdr_len,
 	}
 
 	const uint8_t *start = (uint8_t *)pdr;
-	const uint8_t *end __attribute__((unused)) =
+
+	if (UINTPTR_MAX - (uintptr_t)start <
+	    (sizeof(struct pldm_pdr_hdr) + le16toh(hdr->length))) {
+		return;
+	}
+
+	if (pdr_len < (sizeof(struct pldm_pdr_hdr) + le16toh(hdr->length))) {
+		return;
+	}
+
+	const uint8_t *end =
 		start + sizeof(struct pldm_pdr_hdr) + le16toh(hdr->length);
 	start += sizeof(struct pldm_pdr_hdr);
+
+	if ((uintptr_t)end - (uintptr_t)start <
+	    sizeof(struct pldm_pdr_entity_association)) {
+		return;
+	}
+
 	struct pldm_pdr_entity_association *entity_association_pdr =
 		(struct pldm_pdr_entity_association *)start;
-	size_t l_num_entities = entity_association_pdr->num_children + 1;
-	if (l_num_entities < 2) {
+
+	size_t l_num_entities = entity_association_pdr->num_children;
+
+	if (l_num_entities == 0) {
 		return;
 	}
-	if (start + sizeof(struct pldm_pdr_entity_association) +
-		    sizeof(pldm_entity) * (l_num_entities - 2) !=
-	    end) {
+
+	if ((pdr_len - sizeof(struct pldm_pdr_hdr)) / sizeof(pldm_entity) <
+	    l_num_entities) {
 		return;
 	}
-	pldm_entity *l_entities = malloc(sizeof(pldm_entity) * l_num_entities);
+
+	if (l_num_entities >= (size_t)UINT8_MAX) {
+		return;
+	}
+
+	l_num_entities++;
+
+	pldm_entity *l_entities = calloc(l_num_entities, sizeof(pldm_entity));
 	if (!l_entities) {
 		return;
 	}
@@ -1541,15 +1402,11 @@ void pldm_entity_association_pdr_extract(const uint8_t *pdr, uint16_t pdr_len,
 /* Find the position of record in pldm_pdr repo and place new_record in
  * the same position.
  */
+LIBPLDM_CC_NONNULL
 static int pldm_pdr_replace_record(pldm_pdr *repo, pldm_pdr_record *record,
 				   pldm_pdr_record *prev,
 				   pldm_pdr_record *new_record)
 {
-	assert(repo);
-	assert(record);
-	assert(prev);
-	assert(new_record);
-
 	if (repo->size < record->size) {
 		return -EOVERFLOW;
 	}
@@ -1576,13 +1433,10 @@ static int pldm_pdr_replace_record(pldm_pdr *repo, pldm_pdr_record *record,
 /* Insert a new record to pldm_pdr repo to a position that comes after
  * pldm_pdr_record record.
  */
+LIBPLDM_CC_NONNULL
 static int pldm_pdr_insert_record(pldm_pdr *repo, pldm_pdr_record *record,
 				  pldm_pdr_record *new_record)
 {
-	assert(repo);
-	assert(record);
-	assert(new_record);
-
 	if (repo->size + new_record->size < new_record->size) {
 		return -EOVERFLOW;
 	}
@@ -1605,13 +1459,11 @@ static int pldm_pdr_insert_record(pldm_pdr *repo, pldm_pdr_record *record,
 
 /* Find the position of PDR when its record handle is known
  */
+LIBPLDM_CC_NONNULL
 static bool pldm_pdr_find_record_by_handle(pldm_pdr_record **record,
 					   pldm_pdr_record **prev,
 					   uint32_t record_handle)
 {
-	assert(record);
-	assert(prev);
-
 	while (*record != NULL) {
 		if ((*record)->record_handle == record_handle) {
 			return true;
@@ -1899,367 +1751,72 @@ cleanup_new_record:
 	return rc;
 }
 
-LIBPLDM_ABI_STABLE
-uint16_t pldm_delete_by_effecter_id(pldm_pdr *repo, uint16_t effecter_id,
-				    bool is_remote)
+LIBPLDM_CC_NONNULL
+static bool pldm_entity_cmp(const struct pldm_entity *l,
+			    const struct pldm_entity *r)
 {
-	assert(repo != NULL);
-
-	uint32_t delete_handle = 0;
-	pldm_pdr_record *record = repo->first;
-	pldm_pdr_record *prev = NULL;
-	while (record != NULL) {
-		pldm_pdr_record *next = record->next;
-		struct pldm_pdr_hdr *hdr = (struct pldm_pdr_hdr *)record->data;
-		if ((record->is_remote == is_remote) &&
-		    hdr->type == PLDM_STATE_EFFECTER_PDR) {
-			struct pldm_state_effecter_pdr *pdr =
-				(struct pldm_state_effecter_pdr
-					 *)((uint8_t *)record->data);
-			if (pdr->effecter_id == effecter_id) {
-				delete_handle = hdr->record_handle;
-				if (repo->first == record) {
-					repo->first = next;
-				} else {
-					prev->next = next;
-				}
-				if (repo->last == record) {
-					repo->last = prev;
-					if (prev != NULL) {
-						prev->next = NULL;
-					}
-				}
-				--repo->record_count;
-				repo->size -= record->size;
-				if (record->data) {
-					free(record->data);
-				}
-				free(record);
-				break;
-			}
-			prev = record;
-
-		} else {
-			prev = record;
-		}
-		record = next;
-	}
-	return delete_handle;
-}
-
-LIBPLDM_ABI_STABLE
-uint16_t pldm_delete_by_sensor_id(pldm_pdr *repo, uint16_t sensor_id,
-				  bool is_remote)
-{
-	assert(repo != NULL);
-
-	uint32_t delete_handle = 0;
-	pldm_pdr_record *record = repo->first;
-	pldm_pdr_record *prev = NULL;
-	while (record != NULL) {
-		pldm_pdr_record *next = record->next;
-		struct pldm_pdr_hdr *hdr = (struct pldm_pdr_hdr *)record->data;
-		if ((record->is_remote == is_remote) &&
-		    hdr->type == PLDM_STATE_SENSOR_PDR) {
-			struct pldm_state_sensor_pdr *pdr =
-				(struct pldm_state_sensor_pdr
-					 *)((uint8_t *)record->data);
-			if (pdr->sensor_id == sensor_id) {
-				delete_handle = hdr->record_handle;
-				if (repo->first == record) {
-					repo->first = next;
-				} else {
-					prev->next = next;
-				}
-				if (repo->last == record) {
-					repo->last = prev;
-					if (prev != NULL) {
-						prev->next = NULL;
-					}
-				}
-				--repo->record_count;
-				repo->size -= record->size;
-				if (record->data) {
-					free(record->data);
-				}
-				free(record);
-				break;
-			}
-			prev = record;
-
-		} else {
-			prev = record;
-		}
-		record = next;
-	}
-	return delete_handle;
-}
-
-/* API to find the PDR record that is previous to a given PLDM PDR
- * record in a given PLDM PDR repository
- */
-static pldm_pdr_record *pldm_pdr_get_prev_record(pldm_pdr *repo,
-						 pldm_pdr_record *record)
-{
-	assert(repo);
-	assert(record);
-	pldm_pdr_record *prev = NULL;
-	pldm_pdr_record *curr = repo->first;
-	while (curr != NULL) {
-		if (curr->record_handle == record->record_handle) {
-			break;
-		}
-		prev = curr;
-		curr = curr->next;
-	}
-	return prev;
-}
-
-/* API to check if a PLDM PDR record is present in a PLDM PDR repository
- */
-static bool is_prev_record_present(pldm_pdr *repo, pldm_pdr_record *record)
-{
-	assert(repo);
-	assert(record);
-	if (pldm_pdr_get_prev_record(repo, record) || repo->first == record) {
-		return true;
-	}
-	return false;
-}
-
-/* API to check if FRU RSI of record matches the given record set identifier.
- * Returns 1 if the provided FRU record matches the provided record set identifier,
- * 0 if it does not, otherwise -EINVAL if the arguments are invalid.
- */
-static int pldm_pdr_record_matches_fru_rsi(const pldm_pdr_record *record,
-					   uint16_t rsi)
-{
-	if (!record) {
-		return -EINVAL;
-	}
-	uint16_t record_fru_rsi = 0;
-	struct pldm_msgbuf _dst;
-	struct pldm_msgbuf *dst = &_dst;
-	int rc = 0;
-	rc = pldm_msgbuf_init_errno(
-		dst, sizeof(uint16_t),
-		(record->data + sizeof(struct pldm_pdr_hdr) + sizeof(uint16_t)),
-		sizeof(uint16_t));
-	if (rc) {
-		return rc;
-	}
-	rc = pldm_msgbuf_extract(dst, record_fru_rsi);
-	if (rc) {
-		return rc;
-	}
-	rc = pldm_msgbuf_destroy(dst);
-	if (rc) {
-		return rc;
-	}
-	if (record_fru_rsi == rsi) {
-		return 1;
-	}
-	return 0;
-}
-
-/* API to remove PLDM PDR record from a PLDM PDR repository
- */
-static int pldm_pdr_remove_record(pldm_pdr *repo, pldm_pdr_record *record,
-				  pldm_pdr_record *prev)
-{
-	if (!repo || !record) {
-		return -EINVAL;
-	}
-	if (!is_prev_record_present(repo, record)) {
-		return -EINVAL;
-	}
-	assert(repo->size >= record->size);
-	if (repo->size < record->size) {
-		return -EOVERFLOW;
-	}
-	if (repo->first == record) {
-		repo->first = record->next;
-	} else {
-		if (prev != NULL) {
-			prev->next = record->next;
-		}
-	}
-	if (repo->last == record) {
-		repo->last = prev;
-		if (prev != NULL) {
-			prev->next = NULL;
-		}
-	}
-	repo->record_count -= 1;
-	repo->size -= record->size;
-	free(record->data);
-	free(record);
-	return 0;
-}
-
-LIBPLDM_ABI_STABLE
-int pldm_pdr_remove_fru_record_set_by_rsi(pldm_pdr *repo, uint16_t fru_rsi,
-					  bool is_remote,
-					  uint32_t *record_handle)
-{
-	if (!repo || !record_handle) {
-		return -EINVAL;
-	}
-	pldm_pdr_record *record = repo->first;
-	pldm_pdr_record *prev = NULL;
-	int match = 0;
-	int rc = 0;
-	uint8_t hdr_type = 0;
-	struct pldm_msgbuf _dst;
-	struct pldm_msgbuf *dst = &_dst;
-	while (record != NULL) {
-		rc = pldm_msgbuf_init_errno(
-			dst, sizeof(uint8_t),
-			(record->data + sizeof(uint32_t) + sizeof(uint8_t)),
-			record->size);
-		if (rc) {
-			return rc;
-		}
-		pldm_msgbuf_extract(dst, hdr_type);
-		if (record->is_remote == is_remote &&
-		    hdr_type == PLDM_PDR_FRU_RECORD_SET) {
-			match = pldm_pdr_record_matches_fru_rsi(record,
-								fru_rsi);
-			if (match) {
-				*record_handle = record->record_handle;
-				prev = pldm_pdr_get_prev_record(repo, record);
-				rc = pldm_pdr_remove_record(repo, record, prev);
-				if (rc) {
-					return rc;
-				}
-				break;
-			}
-		}
-		record = record->next;
-	}
-	return rc;
-}
-
-LIBPLDM_ABI_STABLE
-int pldm_entity_association_find_parent_entity(const pldm_pdr *repo,
-					       pldm_entity *parent,
-					       bool is_remote,
-					       uint32_t *record_handle,
-					       bool *found)
-{
-	if (!repo || !parent || !record_handle || !found) {
-		return -EINVAL;
-	}
-	uint16_t container_entity_type = 0;
-	uint16_t container_entity_instance_num = 0;
-	uint16_t entity_container_id = 0;
-	uint8_t hdr_type = 0;
-	pldm_pdr_record *record = repo->first;
-	int rc = 0;
-
-	struct pldm_msgbuf _dst;
-	struct pldm_msgbuf *dst = &_dst;
-
-	while (record != NULL) {
-		rc = pldm_msgbuf_init_errno(
-			dst, sizeof(uint8_t),
-			(record->data + sizeof(uint32_t) + sizeof(uint8_t)),
-			record->size);
-		if (rc) {
-			return rc;
-		}
-
-		pldm_msgbuf_extract(dst, hdr_type);
-
-		if (record->is_remote == is_remote &&
-		    hdr_type == PLDM_PDR_ENTITY_ASSOCIATION) {
-			pldm_msgbuf_init_errno(
-				dst, sizeof(uint16_t),
-				(record->data + sizeof(struct pldm_pdr_hdr) +
-				 sizeof(uint16_t) + sizeof(uint8_t)),
-				record->size);
-			pldm_msgbuf_extract(dst, container_entity_type);
-			pldm_msgbuf_extract(dst, container_entity_instance_num);
-			pldm_msgbuf_extract(dst, entity_container_id);
-			if (container_entity_type == parent->entity_type &&
-			    container_entity_instance_num ==
-				    parent->entity_instance_num &&
-			    entity_container_id ==
-				    parent->entity_container_id) {
-				*record_handle = record->record_handle;
-				*found = true;
-				break;
-			}
-		}
-		record = record->next;
-		rc = pldm_msgbuf_destroy(dst);
-		if (rc) {
-			return rc;
-		}
-	}
-
-	return rc;
+	return l->entity_type == r->entity_type &&
+	       l->entity_instance_num == r->entity_instance_num &&
+	       l->entity_container_id == r->entity_container_id;
 }
 
 /* Find record handle of a PDR record from PDR repo and
  * entity
  */
-static int pldm_entity_association_find_record_hndl_by_entity(
+LIBPLDM_CC_NONNULL
+static int pldm_entity_association_find_record_handle_by_entity(
 	pldm_pdr *repo, pldm_entity *entity, bool is_remote,
 	uint32_t *record_handle)
 {
-	if (!repo || !entity) {
-		return -EINVAL;
-	}
 	uint8_t num_children = 0;
 	uint8_t hdr_type = 0;
 	int rc = 0;
+	size_t skip_data_size = 0;
 	pldm_pdr_record *record = repo->first;
 	struct pldm_msgbuf _dst;
 	struct pldm_msgbuf *dst = &_dst;
+
 	while (record != NULL) {
-		rc = pldm_msgbuf_init_errno(
-			dst, sizeof(uint8_t),
-			(record->data + sizeof(uint32_t) + sizeof(uint8_t)),
-			record->size);
+		rc = pldm_msgbuf_init_errno(dst,
+					    PDR_ENTITY_ASSOCIATION_MIN_SIZE,
+					    record->data, record->size);
 		if (rc) {
 			return rc;
 		}
+		skip_data_size = sizeof(uint32_t) + sizeof(uint8_t);
+		pldm_msgbuf_span_required(dst, skip_data_size, NULL);
 		pldm_msgbuf_extract(dst, hdr_type);
-		if (record->is_remote == is_remote &&
-		    hdr_type == PLDM_PDR_ENTITY_ASSOCIATION) {
-			rc = pldm_msgbuf_init_errno(
-				dst, sizeof(uint8_t),
-				(record->data + sizeof(struct pldm_pdr_hdr) +
+		if (record->is_remote != is_remote ||
+		    hdr_type != PLDM_PDR_ENTITY_ASSOCIATION) {
+			goto cleanup;
+		}
+		skip_data_size = sizeof(uint16_t) + sizeof(uint16_t) +
 				 sizeof(uint16_t) + sizeof(uint8_t) +
-				 sizeof(pldm_entity)),
-				record->size);
-			if (rc) {
+				 sizeof(struct pldm_entity);
+		pldm_msgbuf_span_required(dst, skip_data_size, NULL);
+		pldm_msgbuf_extract(dst, num_children);
+		for (int i = 0; i < num_children; ++i) {
+			struct pldm_entity e;
+
+			if ((rc = pldm_msgbuf_extract(dst, e.entity_type)) ||
+			    (rc = pldm_msgbuf_extract(dst,
+						      e.entity_instance_num)) ||
+			    (rc = pldm_msgbuf_extract(dst,
+						      e.entity_container_id))) {
 				return rc;
 			}
-			pldm_msgbuf_extract(dst, num_children);
-			for (int i = 0; i < num_children; ++i) {
-				uint16_t entity_type = 0;
-				uint16_t entity_instance_num = 0;
-				uint16_t entity_container_id = 0;
-				pldm_msgbuf_extract(dst, entity_type);
-				pldm_msgbuf_extract(dst, entity_instance_num);
-				pldm_msgbuf_extract(dst, entity_container_id);
-				if (entity->entity_type == entity_type &&
-				    entity->entity_instance_num ==
-					    entity_instance_num &&
-				    entity->entity_container_id ==
-					    entity_container_id) {
-					*record_handle = record->record_handle;
-					break;
-				}
+
+			if (pldm_entity_cmp(entity, &e)) {
+				*record_handle = record->record_handle;
+				return 0;
 			}
 		}
-		record = record->next;
+	cleanup:
 		rc = pldm_msgbuf_destroy(dst);
 		if (rc) {
 			return rc;
 		}
+		record = record->next;
 	}
 	return 0;
 }
@@ -2284,7 +1841,7 @@ int pldm_entity_association_pdr_remove_contained_entity(
 	struct pldm_msgbuf *src = &_src;
 	struct pldm_msgbuf _dst;
 	struct pldm_msgbuf *dst = &_dst;
-	rc = pldm_entity_association_find_record_hndl_by_entity(
+	rc = pldm_entity_association_find_record_handle_by_entity(
 		repo, entity, is_remote, pdr_record_handle);
 	if (rc) {
 		return rc;
@@ -2396,5 +1953,520 @@ cleanup_new_record_data:
 	free(new_record->data);
 cleanup_new_record:
 	free(new_record);
+	return rc;
+}
+
+/* API to find the PDR record that is previous to a given PLDM PDR
+ * record in a given PLDM PDR repository
+ */
+LIBPLDM_CC_NONNULL
+static pldm_pdr_record *pldm_pdr_get_prev_record(pldm_pdr *repo,
+						 pldm_pdr_record *record)
+{
+	pldm_pdr_record *prev = NULL;
+	pldm_pdr_record *curr = repo->first;
+
+	while (curr != NULL) {
+		if (curr->record_handle == record->record_handle) {
+			break;
+		}
+		prev = curr;
+		curr = curr->next;
+	}
+	return prev;
+}
+
+/* API to check if a PLDM PDR record is present in a PLDM PDR repository
+ */
+LIBPLDM_CC_NONNULL
+static bool is_prev_record_present(pldm_pdr *repo, pldm_pdr_record *record)
+{
+	if (repo->first == record) {
+		return true;
+	}
+
+	return pldm_pdr_get_prev_record(repo, record) != NULL;
+}
+
+/* API to check if FRU RSI of record matches the given record set identifier.
+ * Returns 1 if the provided FRU record matches the provided record set identifier,
+ * 0 if it does not, otherwise -EINVAL if the arguments are invalid.
+ */
+LIBPLDM_CC_NONNULL
+static int pldm_pdr_record_matches_fru_rsi(const pldm_pdr_record *record,
+					   uint16_t rsi)
+{
+	uint16_t record_fru_rsi = 0;
+	uint8_t *skip_data = NULL;
+	uint8_t skip_data_size = 0;
+	struct pldm_msgbuf _dst;
+	struct pldm_msgbuf *dst = &_dst;
+	int rc = 0;
+
+	rc = pldm_msgbuf_init_errno(dst, PDR_FRU_RECORD_SET_MIN_SIZE,
+				    record->data, record->size);
+	if (rc) {
+		return rc;
+	}
+	skip_data_size = sizeof(struct pldm_pdr_hdr) + sizeof(uint16_t);
+	pldm_msgbuf_span_required(dst, skip_data_size, (void **)&skip_data);
+	pldm_msgbuf_extract(dst, record_fru_rsi);
+
+	rc = pldm_msgbuf_destroy(dst);
+	if (rc) {
+		return rc;
+	}
+	return record_fru_rsi == rsi;
+}
+
+/* API to remove PLDM PDR record from a PLDM PDR repository
+ */
+LIBPLDM_CC_NONNULL_ARGS(1, 2)
+static int pldm_pdr_remove_record(pldm_pdr *repo, pldm_pdr_record *record,
+				  pldm_pdr_record *prev)
+{
+	if (!is_prev_record_present(repo, record)) {
+		return -EINVAL;
+	}
+
+	assert(repo->size >= record->size);
+	if (repo->size < record->size) {
+		return -EOVERFLOW;
+	}
+
+	if (repo->first == record) {
+		repo->first = record->next;
+	} else {
+		if (prev != NULL) {
+			prev->next = record->next;
+		}
+	}
+
+	if (repo->last == record) {
+		repo->last = prev;
+		if (prev != NULL) {
+			prev->next = NULL;
+		}
+	}
+	repo->record_count -= 1;
+	repo->size -= record->size;
+	free(record->data);
+	free(record);
+
+	return 0;
+}
+
+LIBPLDM_ABI_STABLE
+int pldm_pdr_remove_fru_record_set_by_rsi(pldm_pdr *repo, uint16_t fru_rsi,
+					  bool is_remote,
+					  uint32_t *record_handle)
+{
+	if (!repo || !record_handle) {
+		return -EINVAL;
+	}
+	pldm_pdr_record *record = repo->first;
+	pldm_pdr_record *prev = NULL;
+	int match = 0;
+	int rc = 0;
+	uint8_t hdr_type = 0;
+	struct pldm_msgbuf _dst;
+	struct pldm_msgbuf *dst = &_dst;
+	while (record != NULL) {
+		rc = pldm_msgbuf_init_errno(
+			dst, sizeof(uint8_t),
+			(record->data + sizeof(uint32_t) + sizeof(uint8_t)),
+			record->size);
+		if (rc) {
+			return rc;
+		}
+		pldm_msgbuf_extract(dst, hdr_type);
+		if (record->is_remote == is_remote &&
+		    hdr_type == PLDM_PDR_FRU_RECORD_SET) {
+			match = pldm_pdr_record_matches_fru_rsi(record,
+								fru_rsi);
+			if (match) {
+				*record_handle = record->record_handle;
+				prev = pldm_pdr_get_prev_record(repo, record);
+				rc = pldm_pdr_remove_record(repo, record, prev);
+				if (rc) {
+					return rc;
+				}
+				break;
+			}
+		}
+		record = record->next;
+	}
+	return rc;
+}
+
+LIBPLDM_ABI_STABLE
+void pldm_delete_by_record_handle(pldm_pdr *repo, uint32_t record_handle,
+				  bool is_remote)
+{
+	if (repo == NULL) {
+		return;
+	}
+
+	pldm_pdr_record *record = repo->first;
+	pldm_pdr_record *prev = NULL;
+	while (record != NULL) {
+		pldm_pdr_record *next = record->next;
+
+		if (record->data == NULL) {
+			return;
+		}
+		struct pldm_pdr_hdr *hdr = (struct pldm_pdr_hdr *)record->data;
+		if ((record->is_remote == is_remote) &&
+		    (hdr->record_handle == record_handle)) {
+			if (repo->first == record) {
+				repo->first = next;
+			} else {
+				prev->next = next;
+			}
+			if (repo->last == record) {
+				repo->last = prev;
+			}
+
+			free(record->data);
+			--repo->record_count;
+			repo->size -= record->size;
+			free(record);
+			break;
+		}
+		prev = record;
+		record = next;
+	}
+}
+
+LIBPLDM_ABI_STABLE
+pldm_entity pldm_get_entity_from_record_handle(const pldm_pdr *repo,
+					       uint32_t record_handle)
+{
+	pldm_entity element = { 0, 0, 0 };
+
+	if (repo == NULL) {
+		return element;
+	}
+
+	pldm_pdr_record *record = repo->first;
+
+	while (record != NULL) {
+		struct pldm_pdr_hdr *hdr = (struct pldm_pdr_hdr *)record->data;
+		if (hdr->record_handle == record_handle) {
+			switch (hdr->type) {
+			case (PLDM_PDR_FRU_RECORD_SET): {
+				struct pldm_pdr_fru_record_set *pdr =
+					(struct pldm_pdr_fru_record_set
+						 *)((uint8_t *)record->data +
+						    sizeof(struct pldm_pdr_hdr));
+				element.entity_type = pdr->entity_type;
+				element.entity_instance_num =
+					pdr->entity_instance;
+				element.entity_container_id = pdr->container_id;
+				return element;
+			}
+			case (PLDM_STATE_SENSOR_PDR): {
+				struct pldm_state_sensor_pdr *pdr =
+					(struct pldm_state_sensor_pdr
+						 *)((uint8_t *)record->data);
+				element.entity_type = pdr->entity_type;
+				element.entity_instance_num =
+					pdr->entity_instance;
+				element.entity_container_id = pdr->container_id;
+				return element;
+			}
+			case (PLDM_STATE_EFFECTER_PDR): {
+				struct pldm_state_effecter_pdr *pdr =
+					(struct pldm_state_effecter_pdr
+						 *)((uint8_t *)record->data);
+				element.entity_type = pdr->entity_type;
+				element.entity_instance_num =
+					pdr->entity_instance;
+				element.entity_container_id = pdr->container_id;
+				return element;
+			}
+			case (PLDM_NUMERIC_EFFECTER_PDR): {
+				struct pldm_numeric_effecter_value_pdr *pdr =
+					(struct pldm_numeric_effecter_value_pdr
+						 *)((uint8_t *)record->data);
+				element.entity_type = pdr->entity_type;
+				element.entity_instance_num =
+					pdr->entity_instance;
+				element.entity_container_id = pdr->container_id;
+				return element;
+			}
+			default:
+				break;
+			}
+		}
+		record = record->next;
+	}
+	return element;
+}
+
+LIBPLDM_ABI_STABLE
+uint16_t pldm_find_container_id(const pldm_pdr *repo, uint16_t entityType,
+				uint16_t entityInstance,
+				uint32_t first_record_handle,
+				uint32_t last_record_handle)
+{
+	if (repo == NULL) {
+		return 0;
+	}
+
+	pldm_pdr_record *record = repo->first;
+
+	while (record != NULL) {
+		struct pldm_pdr_hdr *hdr = (struct pldm_pdr_hdr *)record->data;
+		if (hdr->type == PLDM_PDR_ENTITY_ASSOCIATION &&
+		    !(pldm_record_handle_in_range(record->record_handle,
+						  first_record_handle,
+						  last_record_handle))) {
+			struct pldm_pdr_entity_association *pdr =
+				(struct pldm_pdr_entity_association
+					 *)((uint8_t *)record->data +
+					    sizeof(struct pldm_pdr_hdr));
+			struct pldm_entity *child =
+				(struct pldm_entity *)(&pdr->children[0]);
+			for (int i = 0; i < pdr->num_children; ++i) {
+				if (pdr->container.entity_type == entityType &&
+				    pdr->container.entity_instance_num ==
+					    entityInstance) {
+					uint16_t id =
+						child->entity_container_id;
+					return id;
+				}
+			}
+		}
+		record = record->next;
+	}
+	return 0;
+}
+
+LIBPLDM_ABI_STABLE
+void pldm_change_container_id_of_effecter(const pldm_pdr *repo,
+					  uint16_t effecterId,
+					  uint16_t containerId)
+{
+	if (repo == NULL) {
+		return;
+	}
+
+	pldm_pdr_record *record = repo->first;
+
+	while (record != NULL) {
+		struct pldm_pdr_hdr *hdr = (struct pldm_pdr_hdr *)record->data;
+		if (hdr->type == PLDM_NUMERIC_EFFECTER_PDR) {
+			struct pldm_numeric_effecter_value_pdr *pdr =
+				(struct pldm_numeric_effecter_value_pdr
+					 *)((uint8_t *)record->data);
+			if (pdr->effecter_id == effecterId) {
+				pdr->container_id = containerId;
+				break;
+			}
+		}
+		record = record->next;
+	}
+}
+
+LIBPLDM_ABI_STABLE
+void pldm_entity_association_tree_delete_node(
+	pldm_entity_association_tree *tree, pldm_entity entity)
+{
+	pldm_entity_node *node = NULL;
+	pldm_find_entity_ref_in_tree(tree, entity, &node);
+	if (node == NULL) {
+		return;
+	}
+	pldm_entity_node *parent = NULL;
+	pldm_find_entity_ref_in_tree(tree, node->parent, &parent);
+	if (parent == NULL) {
+		return;
+	}
+	pldm_entity_node *start = parent->first_child;
+	pldm_entity_node *prev = parent->first_child;
+	while (start != NULL) {
+		pldm_entity current_entity;
+		current_entity.entity_type = start->entity.entity_type;
+		current_entity.entity_instance_num =
+			start->entity.entity_instance_num;
+		current_entity.entity_container_id =
+			start->entity.entity_container_id;
+		if (current_entity.entity_type == entity.entity_type &&
+		    current_entity.entity_instance_num ==
+			    entity.entity_instance_num &&
+		    current_entity.entity_container_id ==
+			    entity.entity_container_id) {
+			if (start == parent->first_child) {
+				parent->first_child = start->next_sibling;
+			} else {
+				prev->next_sibling = start->next_sibling;
+			}
+			start->next_sibling = NULL;
+			break;
+		}
+		prev = start;
+		start = start->next_sibling;
+	}
+	entity_association_tree_destroy(node);
+}
+
+LIBPLDM_ABI_STABLE
+uint16_t pldm_delete_by_effecter_id(pldm_pdr *repo, uint16_t effecter_id,
+				    bool is_remote)
+{
+	uint32_t delete_handle = 0;
+	if (repo == NULL) {
+		return delete_handle;
+	}
+
+	pldm_pdr_record *record = repo->first;
+	pldm_pdr_record *prev = NULL;
+	while (record != NULL) {
+		pldm_pdr_record *next = record->next;
+		struct pldm_pdr_hdr *hdr = (struct pldm_pdr_hdr *)record->data;
+		if ((record->is_remote == is_remote) &&
+		    hdr->type == PLDM_STATE_EFFECTER_PDR) {
+			struct pldm_state_effecter_pdr *pdr =
+				(struct pldm_state_effecter_pdr
+					 *)((uint8_t *)record->data);
+			if (pdr->effecter_id == effecter_id) {
+				delete_handle = hdr->record_handle;
+				if (repo->first == record) {
+					repo->first = next;
+				} else {
+					prev->next = next;
+				}
+				if (repo->last == record) {
+					repo->last = prev;
+					if (prev != NULL) {
+						prev->next = NULL;
+					}
+				}
+				--repo->record_count;
+				repo->size -= record->size;
+				if (record->data) {
+					free(record->data);
+				}
+				free(record);
+				break;
+			}
+			prev = record;
+
+		} else {
+			prev = record;
+		}
+		record = next;
+	}
+	return delete_handle;
+}
+
+LIBPLDM_ABI_STABLE
+uint16_t pldm_delete_by_sensor_id(pldm_pdr *repo, uint16_t sensor_id,
+				  bool is_remote)
+{
+	uint32_t delete_handle = 0;
+	if (repo == NULL) {
+		return delete_handle;
+	}
+	pldm_pdr_record *record = repo->first;
+	pldm_pdr_record *prev = NULL;
+	while (record != NULL) {
+		pldm_pdr_record *next = record->next;
+		struct pldm_pdr_hdr *hdr = (struct pldm_pdr_hdr *)record->data;
+		if ((record->is_remote == is_remote) &&
+		    hdr->type == PLDM_STATE_SENSOR_PDR) {
+			struct pldm_state_sensor_pdr *pdr =
+				(struct pldm_state_sensor_pdr
+					 *)((uint8_t *)record->data);
+			if (pdr->sensor_id == sensor_id) {
+				delete_handle = hdr->record_handle;
+				if (repo->first == record) {
+					repo->first = next;
+				} else {
+					prev->next = next;
+				}
+				if (repo->last == record) {
+					repo->last = prev;
+					if (prev != NULL) {
+						prev->next = NULL;
+					}
+				}
+				--repo->record_count;
+				repo->size -= record->size;
+				if (record->data) {
+					free(record->data);
+				}
+				free(record);
+				break;
+			}
+			prev = record;
+
+		} else {
+			prev = record;
+		}
+		record = next;
+	}
+	return delete_handle;
+}
+
+LIBPLDM_ABI_STABLE
+int pldm_entity_association_find_parent_entity(const pldm_pdr *repo,
+					       pldm_entity *parent,
+					       bool is_remote,
+					       uint32_t *record_handle,
+					       bool *found)
+{
+	if (!repo || !parent || !record_handle || !found) {
+		return -EINVAL;
+	}
+	uint16_t container_entity_type = 0;
+	uint16_t container_entity_instance_num = 0;
+	uint16_t entity_container_id = 0;
+	uint8_t hdr_type = 0;
+	pldm_pdr_record *record = repo->first;
+	int rc = 0;
+
+	struct pldm_msgbuf _dst;
+	struct pldm_msgbuf *dst = &_dst;
+
+	while (record != NULL) {
+		rc = pldm_msgbuf_init_errno(
+			dst, sizeof(uint8_t),
+			(record->data + sizeof(uint32_t) + sizeof(uint8_t)),
+			record->size);
+		if (rc) {
+			return rc;
+		}
+
+		pldm_msgbuf_extract(dst, hdr_type);
+
+		if (record->is_remote == is_remote &&
+		    hdr_type == PLDM_PDR_ENTITY_ASSOCIATION) {
+			pldm_msgbuf_init_errno(
+				dst, sizeof(uint16_t),
+				(record->data + sizeof(struct pldm_pdr_hdr) +
+				 sizeof(uint16_t) + sizeof(uint8_t)),
+				record->size);
+			pldm_msgbuf_extract(dst, container_entity_type);
+			pldm_msgbuf_extract(dst, container_entity_instance_num);
+			pldm_msgbuf_extract(dst, entity_container_id);
+			if (container_entity_type == parent->entity_type &&
+			    container_entity_instance_num ==
+				    parent->entity_instance_num &&
+			    entity_container_id ==
+				    parent->entity_container_id) {
+				*record_handle = record->record_handle;
+				*found = true;
+				break;
+			}
+		}
+		record = record->next;
+		rc = pldm_msgbuf_destroy(dst);
+		if (rc) {
+			return rc;
+		}
+	}
+
 	return rc;
 }
