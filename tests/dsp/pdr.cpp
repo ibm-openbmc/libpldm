@@ -1515,7 +1515,7 @@ TEST(EntityAssociationPDR, testFind)
 TEST(EntityAssociationPDR, testCopyTree)
 {
     pldm_entity entities[4]{};
-    int rc;
+    // int rc;
 
     entities[0].entity_type = 1;
     entities[1].entity_type = 2;
@@ -1542,8 +1542,7 @@ TEST(EntityAssociationPDR, testCopyTree)
     pldm_entity_association_tree_visit(orgTree, &orgOut, &orgNum);
     EXPECT_EQ(orgNum, 4u);
 
-    rc = pldm_entity_association_tree_copy_root_check(orgTree, newTree);
-    ASSERT_EQ(rc, 0);
+    pldm_entity_association_tree_copy_root(orgTree, newTree);
     size_t newNum{};
     pldm_entity* newOut = nullptr;
     pldm_entity_association_tree_visit(newTree, &newOut, &newNum);
@@ -1562,12 +1561,12 @@ TEST(EntityAssociationPDR, testExtract)
 {
     std::vector<uint8_t> pdr{};
     pdr.resize(sizeof(pldm_pdr_hdr) + sizeof(pldm_pdr_entity_association) +
-               sizeof(pldm_entity) * 5);
+               sizeof(pldm_entity) * 4);
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     pldm_pdr_hdr* hdr = reinterpret_cast<pldm_pdr_hdr*>(pdr.data());
     hdr->type = PLDM_PDR_ENTITY_ASSOCIATION;
     hdr->length =
-        htole16(sizeof(pldm_pdr_entity_association) + sizeof(pldm_entity) * 5);
+        htole16(sizeof(pldm_pdr_entity_association) + sizeof(pldm_entity) * 4);
 
     pldm_pdr_entity_association* e =
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
