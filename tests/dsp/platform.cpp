@@ -467,8 +467,7 @@ TEST(GetPDR, testGoodDecodeResponseSafe)
     alignas(pldm_msg) unsigned char data[sizeof(pldm_msg_hdr) +
                                          PLDM_GET_PDR_MIN_RESP_BYTES +
                                          sizeof(recordData) - 1 + 1];
-    struct pldm_msgbuf _buf;
-    struct pldm_msgbuf* buf = &_buf;
+    PLDM_MSGBUF_DEFINE_P(buf);
     int rc;
 
     pldm_msg* msg = new (data) pldm_msg;
@@ -486,7 +485,7 @@ TEST(GetPDR, testGoodDecodeResponseSafe)
                                        sizeof(recordData) - 1);
     ASSERT_EQ(rc, 0);
     pldm_msgbuf_insert_uint8(buf, 96);
-    ASSERT_EQ(pldm_msgbuf_destroy_consumed(buf), 0);
+    ASSERT_EQ(pldm_msgbuf_complete_consumed(buf), 0);
 
     alignas(pldm_get_pdr_resp) unsigned char
         resp_data[sizeof(pldm_get_pdr_resp) + sizeof(recordData) - 1];
@@ -709,8 +708,7 @@ TEST(GetPDRRepositoryInfo, testGoodDecodeResponseSafe)
         data[sizeof(pldm_msg_hdr) + PLDM_GET_PDR_REPOSITORY_INFO_RESP_BYTES];
     uint8_t updateTime[PLDM_TIMESTAMP104_SIZE] = {0};
     uint8_t oemUpdateTime[PLDM_TIMESTAMP104_SIZE] = {0};
-    struct pldm_msgbuf _buf;
-    struct pldm_msgbuf* buf = &_buf;
+    PLDM_MSGBUF_DEFINE_P(buf);
     int rc;
 
     pldm_msg* msg = new (data) pldm_msg;
@@ -730,7 +728,7 @@ TEST(GetPDRRepositoryInfo, testGoodDecodeResponseSafe)
     pldm_msgbuf_insert_uint32(buf, 100);
     pldm_msgbuf_insert_uint32(buf, UINT32_MAX);
     pldm_msgbuf_insert_uint8(buf, PLDM_NO_TIMEOUT);
-    ASSERT_EQ(pldm_msgbuf_destroy_consumed(buf), 0);
+    ASSERT_EQ(pldm_msgbuf_complete_consumed(buf), 0);
 
     struct pldm_pdr_repository_info_resp resp;
     rc = decode_get_pdr_repository_info_resp_safe(
@@ -1466,12 +1464,11 @@ TEST(PollForPlatformEventMessage, testGoodEncodeRequestFirstPart)
         PLDM_POLL_FOR_PLATFORM_EVENT_MESSAGE_REQ_BYTES);
     EXPECT_EQ(rc, PLDM_SUCCESS);
 
-    struct pldm_msgbuf _buf;
-    struct pldm_msgbuf* buf = &_buf;
+    PLDM_MSGBUF_DEFINE_P(buf);
     rc = pldm_msgbuf_init_errno(
         buf, PLDM_POLL_FOR_PLATFORM_EVENT_MESSAGE_REQ_BYTES, request->payload,
         PLDM_POLL_FOR_PLATFORM_EVENT_MESSAGE_REQ_BYTES);
-    EXPECT_EQ(rc, 0);
+    ASSERT_EQ(rc, 0);
 
     uint8_t retFormatVersion;
     uint8_t retTransferOperationFlag;
@@ -1482,7 +1479,7 @@ TEST(PollForPlatformEventMessage, testGoodEncodeRequestFirstPart)
     pldm_msgbuf_extract_uint8(buf, retTransferOperationFlag);
     pldm_msgbuf_extract_uint32(buf, retDataTransferHandle);
     pldm_msgbuf_extract_uint16(buf, retEventIdToAcknowledge);
-    ASSERT_EQ(pldm_msgbuf_destroy_consumed(buf), 0);
+    ASSERT_EQ(pldm_msgbuf_complete_consumed(buf), 0);
 
     EXPECT_EQ(retFormatVersion, formatVersion);
     EXPECT_EQ(retTransferOperationFlag, transferOperationFlag);
@@ -1505,12 +1502,11 @@ TEST(PollForPlatformEventMessage, testGoodEncodeRequestNextPart)
         PLDM_POLL_FOR_PLATFORM_EVENT_MESSAGE_REQ_BYTES);
     EXPECT_EQ(rc, PLDM_SUCCESS);
 
-    struct pldm_msgbuf _buf;
-    struct pldm_msgbuf* buf = &_buf;
+    PLDM_MSGBUF_DEFINE_P(buf);
     rc = pldm_msgbuf_init_errno(
         buf, PLDM_POLL_FOR_PLATFORM_EVENT_MESSAGE_REQ_BYTES, request->payload,
         PLDM_POLL_FOR_PLATFORM_EVENT_MESSAGE_REQ_BYTES);
-    EXPECT_EQ(rc, 0);
+    ASSERT_EQ(rc, 0);
 
     uint8_t retFormatVersion;
     uint8_t retTransferOperationFlag;
@@ -1521,7 +1517,7 @@ TEST(PollForPlatformEventMessage, testGoodEncodeRequestNextPart)
     pldm_msgbuf_extract_uint8(buf, retTransferOperationFlag);
     pldm_msgbuf_extract_uint32(buf, retDataTransferHandle);
     pldm_msgbuf_extract_uint16(buf, retEventIdToAcknowledge);
-    ASSERT_EQ(pldm_msgbuf_destroy_consumed(buf), 0);
+    ASSERT_EQ(pldm_msgbuf_complete_consumed(buf), 0);
 
     EXPECT_EQ(retFormatVersion, formatVersion);
     EXPECT_EQ(retTransferOperationFlag, transferOperationFlag);
@@ -1544,12 +1540,11 @@ TEST(PollForPlatformEventMessage, testGoodEncodeRequestAckOnly)
         PLDM_POLL_FOR_PLATFORM_EVENT_MESSAGE_REQ_BYTES);
     EXPECT_EQ(rc, PLDM_SUCCESS);
 
-    struct pldm_msgbuf _buf;
-    struct pldm_msgbuf* buf = &_buf;
+    PLDM_MSGBUF_DEFINE_P(buf);
     rc = pldm_msgbuf_init_errno(
         buf, PLDM_POLL_FOR_PLATFORM_EVENT_MESSAGE_REQ_BYTES, request->payload,
         PLDM_POLL_FOR_PLATFORM_EVENT_MESSAGE_REQ_BYTES);
-    EXPECT_EQ(rc, 0);
+    ASSERT_EQ(rc, 0);
 
     uint8_t retFormatVersion;
     uint8_t retTransferOperationFlag;
@@ -1560,7 +1555,7 @@ TEST(PollForPlatformEventMessage, testGoodEncodeRequestAckOnly)
     pldm_msgbuf_extract_uint8(buf, retTransferOperationFlag);
     pldm_msgbuf_extract_uint32(buf, retDataTransferHandle);
     pldm_msgbuf_extract_uint16(buf, retEventIdToAcknowledge);
-    ASSERT_EQ(pldm_msgbuf_destroy_consumed(buf), 0);
+    ASSERT_EQ(pldm_msgbuf_complete_consumed(buf), 0);
 
     EXPECT_EQ(retFormatVersion, formatVersion);
     EXPECT_EQ(retTransferOperationFlag, transferOperationFlag);
@@ -2017,12 +2012,11 @@ TEST(PollForPlatformEventMessage, testGoodEncodeResposeP1)
         eventDataIntegrityChecksum, response, payloadLength);
     EXPECT_EQ(rc, PLDM_SUCCESS);
 
-    struct pldm_msgbuf _buf;
-    struct pldm_msgbuf* buf = &_buf;
+    PLDM_MSGBUF_DEFINE_P(buf);
     rc = pldm_msgbuf_init_errno(
         buf, PLDM_POLL_FOR_PLATFORM_EVENT_MESSAGE_MIN_RESP_BYTES,
         response->payload, payloadLength);
-    EXPECT_EQ(rc, 0);
+    ASSERT_EQ(rc, 0);
 
     uint8_t retCompletionCode;
     uint8_t retTid = 0;
@@ -2045,6 +2039,7 @@ TEST(PollForPlatformEventMessage, testGoodEncodeResposeP1)
                                          sizeof(retEventData));
     ASSERT_EQ(rc, 0);
     pldm_msgbuf_extract_uint32(buf, retEventDataIntegrityChecksum);
+    ASSERT_EQ(pldm_msgbuf_complete(buf), 0);
 
     EXPECT_EQ(rc, PLDM_SUCCESS);
     EXPECT_EQ(retCompletionCode, completionCode);
@@ -2056,8 +2051,6 @@ TEST(PollForPlatformEventMessage, testGoodEncodeResposeP1)
     EXPECT_EQ(retEventDataSize, eventDataSize);
     EXPECT_EQ(retEventDataIntegrityChecksum, eventDataIntegrityChecksum);
     EXPECT_EQ(0, memcmp(pEventData, retEventData, eventDataSize));
-
-    EXPECT_EQ(pldm_msgbuf_destroy(buf), PLDM_SUCCESS);
 }
 
 TEST(PollForPlatformEventMessage, testGoodEncodeResposeP2)
@@ -2078,12 +2071,11 @@ TEST(PollForPlatformEventMessage, testGoodEncodeResposeP2)
         response, payloadLength);
     EXPECT_EQ(rc, PLDM_SUCCESS);
 
-    struct pldm_msgbuf _buf;
-    struct pldm_msgbuf* buf = &_buf;
+    PLDM_MSGBUF_DEFINE_P(buf);
     rc = pldm_msgbuf_init_errno(
         buf, PLDM_POLL_FOR_PLATFORM_EVENT_MESSAGE_MIN_RESP_BYTES,
         response->payload, payloadLength);
-    EXPECT_EQ(rc, 0);
+    ASSERT_EQ(rc, 0);
 
     uint8_t retCompletionCode;
     uint8_t retTid = 0;
@@ -2092,12 +2084,12 @@ TEST(PollForPlatformEventMessage, testGoodEncodeResposeP2)
     pldm_msgbuf_extract_uint8(buf, retCompletionCode);
     pldm_msgbuf_extract_uint8(buf, retTid);
     pldm_msgbuf_extract_uint16(buf, retEventId);
+    ASSERT_EQ(pldm_msgbuf_complete(buf), 0);
 
     EXPECT_EQ(rc, PLDM_SUCCESS);
     EXPECT_EQ(retCompletionCode, completionCode);
     EXPECT_EQ(retTid, tId);
     EXPECT_EQ(retEventId, eventId);
-    EXPECT_EQ(pldm_msgbuf_destroy(buf), PLDM_SUCCESS);
 }
 
 TEST(PollForPlatformEventMessage, testGoodEncodeResposeP3)
@@ -2118,12 +2110,11 @@ TEST(PollForPlatformEventMessage, testGoodEncodeResposeP3)
         response, payloadLength);
     EXPECT_EQ(rc, PLDM_SUCCESS);
 
-    struct pldm_msgbuf _buf;
-    struct pldm_msgbuf* buf = &_buf;
+    PLDM_MSGBUF_DEFINE_P(buf);
     rc = pldm_msgbuf_init_errno(
         buf, PLDM_POLL_FOR_PLATFORM_EVENT_MESSAGE_MIN_RESP_BYTES,
         response->payload, payloadLength);
-    EXPECT_EQ(rc, 0);
+    ASSERT_EQ(rc, 0);
 
     uint8_t retCompletionCode;
     uint8_t retTid = 0;
@@ -2132,12 +2123,12 @@ TEST(PollForPlatformEventMessage, testGoodEncodeResposeP3)
     pldm_msgbuf_extract_uint8(buf, retCompletionCode);
     pldm_msgbuf_extract_uint8(buf, retTid);
     pldm_msgbuf_extract_uint16(buf, retEventId);
+    ASSERT_EQ(pldm_msgbuf_complete(buf), PLDM_SUCCESS);
 
     EXPECT_EQ(rc, PLDM_SUCCESS);
     EXPECT_EQ(retCompletionCode, completionCode);
     EXPECT_EQ(retTid, tId);
     EXPECT_EQ(retEventId, eventId);
-    EXPECT_EQ(pldm_msgbuf_destroy(buf), PLDM_SUCCESS);
 }
 
 TEST(PollForPlatformEventMessage, testGoodEncodeResposeP4)
@@ -2167,12 +2158,11 @@ TEST(PollForPlatformEventMessage, testGoodEncodeResposeP4)
         eventDataIntegrityChecksum, response, payloadLength);
     EXPECT_EQ(rc, PLDM_SUCCESS);
 
-    struct pldm_msgbuf _buf;
-    struct pldm_msgbuf* buf = &_buf;
+    PLDM_MSGBUF_DEFINE_P(buf);
     rc = pldm_msgbuf_init_errno(
         buf, PLDM_POLL_FOR_PLATFORM_EVENT_MESSAGE_MIN_RESP_BYTES,
         response->payload, payloadLength);
-    EXPECT_EQ(rc, 0);
+    ASSERT_EQ(rc, 0);
 
     uint8_t retCompletionCode;
     uint8_t retTid = 0;
@@ -2191,6 +2181,7 @@ TEST(PollForPlatformEventMessage, testGoodEncodeResposeP4)
     pldm_msgbuf_extract_uint8(buf, retEventClass);
     pldm_msgbuf_extract_uint32(buf, retEventDataSize);
     pldm_msgbuf_extract_uint32(buf, retEventDataIntegrityChecksum);
+    EXPECT_EQ(pldm_msgbuf_complete(buf), 0);
 
     EXPECT_EQ(rc, PLDM_SUCCESS);
     EXPECT_EQ(retCompletionCode, completionCode);
@@ -2201,8 +2192,6 @@ TEST(PollForPlatformEventMessage, testGoodEncodeResposeP4)
     EXPECT_EQ(retEventClass, eventClass);
     EXPECT_EQ(retEventDataSize, eventDataSize);
     EXPECT_EQ(retEventDataIntegrityChecksum, eventDataIntegrityChecksum);
-
-    EXPECT_EQ(pldm_msgbuf_destroy(buf), PLDM_SUCCESS);
 }
 
 TEST(PollForPlatformEventMessage, testBadEncodeResponse)
@@ -2336,8 +2325,7 @@ TEST(PlatformEventMessage, testGoodEncodeRequest)
     static constexpr const uint8_t eventData = 34;
     static constexpr const uint8_t Tid = 0x03;
     struct pldm_platform_event_message_req req;
-    struct pldm_msgbuf _buf;
-    struct pldm_msgbuf* buf = &_buf;
+    PLDM_MSGBUF_DEFINE_P(buf);
     size_t len;
     void* data;
 
@@ -2360,7 +2348,7 @@ TEST(PlatformEventMessage, testGoodEncodeRequest)
     pldm_msgbuf_extract_uint8(buf, req.event_class);
     data = nullptr;
     pldm_msgbuf_span_remaining(buf, &data, &len);
-    ASSERT_EQ(pldm_msgbuf_destroy_consumed(buf), 0);
+    ASSERT_EQ(pldm_msgbuf_complete_consumed(buf), 0);
 
     EXPECT_EQ(formatVersion, req.format_version);
     EXPECT_EQ(Tid, req.tid);
@@ -2385,7 +2373,7 @@ TEST(PlatformEventMessage, testGoodEncodeRequest)
 
     data = nullptr;
     pldm_msgbuf_span_remaining(buf, &data, &len);
-    ASSERT_EQ(pldm_msgbuf_destroy_consumed(buf), 0);
+    ASSERT_EQ(pldm_msgbuf_complete_consumed(buf), 0);
 
     EXPECT_EQ(formatVersion, req.format_version);
     EXPECT_EQ(Tid, req.tid);
@@ -2664,27 +2652,26 @@ TEST(PlatformEventMessage, testGoodPldmMsgPollEventDataEncode)
 
     EXPECT_EQ(rc, PLDM_SUCCESS);
 
-    struct pldm_msgbuf _buf;
-    struct pldm_msgbuf* buf = &_buf;
+    PLDM_MSGBUF_DEFINE_P(buf);
 
     rc = pldm_msgbuf_init_errno(
         buf, PLDM_MSG_POLL_EVENT_LENGTH,
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
         reinterpret_cast<uint8_t*>(eventData.data()), eventData.size());
-    EXPECT_EQ(rc, 0);
+    ASSERT_EQ(rc, 0);
 
     uint8_t retFormatVersion;
     uint16_t reteventID;
     uint32_t retDataTransferHandle;
 
-    EXPECT_EQ(pldm_msgbuf_extract_uint8(buf, retFormatVersion), PLDM_SUCCESS);
-    EXPECT_EQ(pldm_msgbuf_extract_uint16(buf, reteventID), PLDM_SUCCESS);
-    EXPECT_EQ(pldm_msgbuf_extract_uint32(buf, retDataTransferHandle),
-              PLDM_SUCCESS);
+    pldm_msgbuf_extract_uint8(buf, retFormatVersion);
+    pldm_msgbuf_extract_uint16(buf, reteventID);
+    pldm_msgbuf_extract_uint32(buf, retDataTransferHandle);
+    ASSERT_EQ(pldm_msgbuf_complete_consumed(buf), PLDM_SUCCESS);
+
     EXPECT_EQ(retFormatVersion, poll_event.format_version);
     EXPECT_EQ(reteventID, poll_event.event_id);
     EXPECT_EQ(retDataTransferHandle, poll_event.data_transfer_handle);
-    EXPECT_EQ(pldm_msgbuf_destroy_consumed(buf), PLDM_SUCCESS);
 }
 #endif
 
@@ -5852,3 +5839,244 @@ TEST(PlatformEventMessage, testBadCperEventDataDecodeRequest)
 
     free(cperEvent);
 }
+
+#ifdef LIBPLDM_API_TESTING
+TEST(decodePldmFileDescriptorPdr, oemFileClassificationPresentTest)
+{
+    std::vector<uint8_t> pdr1{
+        // Common PDR Header
+        0x01, 0x0, 0x0, 0x0,      // Record Handle
+        0x01,                     // PDR Header Version
+        PLDM_FILE_DESCRIPTOR_PDR, // PDRType
+        0x01, 0x00,               // Record Change Number
+        0x2A, 0x00,               // Data Length = 42 bytes
+        /* PLDM File Descriptor PDR Data*/
+        0x01, 0x00, // Terminus Handle = 0x01
+        0x01, 0x00, // File Identifier = 0x01
+        0x09, 0x00, // Entity Type = Physical | Device File
+        0x01, 0x00, // Entity instance number = 1
+        PLDM_PLATFORM_ENTITY_SYSTEM_CONTAINER_ID,
+        0,                      // Container ID = Overall system
+        0x02, 0,                // Supper Dir File Identifier = 0x0002
+        0x01,                   // File Classification = 0x01 (BootLog)
+        0x01,                   // OEM File Classification = 0x01
+        0x15, 0x00,             // File Capabilities = 0x0015
+        0xff, 0xff, 0xff, 0xff, // File Version = 0xffffffff (Unversioned)
+        0x00, 0x28, 0x00, 0x00, // File Maximum Size = 10KB
+        0x02,                   // File Maximum File Descriptor count = 2
+        0x06,                   // File Name Length = 6
+        0x46, 0x69, 0x6C, 0x65, 0x31,
+        0x00, // File Name = "File1\NULL"
+        0x09, // OEM File Classification Name Length = 9
+        0x4F, 0x45, 0x4D, 0x20, 0x46, 0x69, 0x6C, 0x65,
+        0x00 // OEM File Classification Name = "OEM File\NULL"
+    };
+
+    const char expectFileName[] = "File1";
+    const char expectOEMClassificationName[] = "OEM File";
+
+    struct pldm_file_descriptor_pdr decodedPdr = {};
+
+    auto rc =
+        decode_pldm_file_descriptor_pdr(pdr1.data(), pdr1.size(), &decodedPdr);
+
+    ASSERT_EQ(0, rc);
+    EXPECT_EQ(1, decodedPdr.terminus_handle);
+    EXPECT_EQ(1, decodedPdr.file_identifier);
+    EXPECT_EQ(9, decodedPdr.container.entity_type);
+    EXPECT_EQ(1, decodedPdr.container.entity_instance_num);
+    EXPECT_EQ(PLDM_PLATFORM_ENTITY_SYSTEM_CONTAINER_ID,
+              decodedPdr.container.entity_container_id);
+    EXPECT_EQ(2, decodedPdr.superior_directory_file_identifier);
+    EXPECT_EQ(1, decodedPdr.file_classification);
+    EXPECT_EQ(1, decodedPdr.oem_file_classification);
+    EXPECT_EQ(21, decodedPdr.file_capabilities.value);
+    EXPECT_EQ(0xff, decodedPdr.file_version.alpha);
+    EXPECT_EQ(0xff, decodedPdr.file_version.update);
+    EXPECT_EQ(0xff, decodedPdr.file_version.minor);
+    EXPECT_EQ(0xff, decodedPdr.file_version.major);
+    EXPECT_EQ(10240, decodedPdr.file_maximum_size);
+    EXPECT_EQ(2, decodedPdr.file_maximum_file_descriptor_count);
+    EXPECT_EQ(6, decodedPdr.file_name.length);
+
+    EXPECT_EQ(memcmp(expectFileName, decodedPdr.file_name.ptr,
+                     sizeof(char) * decodedPdr.file_name.length),
+              0);
+
+    if (decodedPdr.oem_file_classification)
+    {
+        EXPECT_EQ(9, decodedPdr.oem_file_classification_name.length);
+        EXPECT_EQ(memcmp(expectOEMClassificationName,
+                         decodedPdr.oem_file_classification_name.ptr,
+                         sizeof(char) *
+                             decodedPdr.oem_file_classification_name.length),
+                  0);
+    }
+}
+#endif
+
+#ifdef LIBPLDM_API_TESTING
+TEST(decodePldmFileDescriptorPdr, BadTestUnAllocatedPtrParams)
+{
+    int rc;
+    std::vector<uint8_t> pdr1{
+        // Common PDR Header
+        0x01, 0x0, 0x0, 0x0,      // Record Handle
+        0x01,                     // PDR Header Version
+        PLDM_FILE_DESCRIPTOR_PDR, // PDRType
+        0x01, 0x00,               // Record Change Number
+        0x20, 0x00,               // Data Length = 32 bytes
+        /* PLDM File Descriptor PDR Data*/
+        0x01, 0x00, // Terminus Handle = 0x01
+        0x01, 0x00, // File Identifier = 0x01
+        0x09, 0x00, // Entity Type = Physical | Device File
+        0x01, 0x00, // Entity instance number = 1
+        PLDM_PLATFORM_ENTITY_SYSTEM_CONTAINER_ID,
+        0,                      // Container ID = Overall system
+        0x02, 0,                // Supper Dir File Identifier = 0x0002
+        0x01,                   // File Classification = 0x01 (BootLog)
+        0x00,                   // OEM File Classification = 0x00
+        0x15, 0x00,             // File Capabilities = 0x0015
+        0xff, 0xff, 0xff, 0xff, // File Version = 0xffffffff (Unversioned)
+        0x00, 0x28, 0x00, 0x00, // File Maximum Size = 10KB
+        0x02,                   // File Maximum File Descriptor count = 2
+        0x06,                   // File Name Length = 6
+        0x46, 0x69, 0x6C, 0x65, 0x31,
+        0x00, // File Name = "File1\NULL"
+    };
+
+    struct pldm_file_descriptor_pdr decodedPdr = {};
+
+    rc = decode_pldm_file_descriptor_pdr(nullptr, pdr1.size(), &decodedPdr);
+    EXPECT_EQ(-EINVAL, rc);
+
+    rc = decode_pldm_file_descriptor_pdr(pdr1.data(), pdr1.size(), nullptr);
+    EXPECT_EQ(-EINVAL, rc);
+}
+#endif
+
+#ifdef LIBPLDM_API_TESTING
+TEST(decodePldmFileDescriptorPdr, BadTestInvalidExpectedParamLength)
+{
+    int rc;
+
+    std::vector<uint8_t> pdr1{
+        // Common PDR Header
+        0x01, 0x0, 0x0, 0x0,      // Record Handle
+        0x01,                     // PDR Header Version
+        PLDM_FILE_DESCRIPTOR_PDR, // PDRType
+        0x01, 0x00,               // Record Change Number
+        0x20, 0x00,               // Data Length = 32 bytes
+        /* PLDM File Descriptor PDR Data*/
+        0x01, 0x00, // Terminus Handle = 0x01
+        0x01, 0x00, // File Identifier = 0x01
+        0x09, 0x00, // Entity Type = Physical | Device File
+        0x01, 0x00, // Entity instance number = 1
+        PLDM_PLATFORM_ENTITY_SYSTEM_CONTAINER_ID,
+        0,                      // Container ID = Overall system
+        0x02, 0,                // Supper Dir File Identifier = 0x0002
+        0x01,                   // File Classification = 0x01 (BootLog)
+        0x00,                   // OEM File Classification = 0x00
+        0x15, 0x00,             // File Capabilities = 0x0015
+        0xff, 0xff, 0xff, 0xff, // File Version = 0xffffffff (Unversioned)
+        0x00, 0x28, 0x00, 0x00, // File Maximum Size = 10KB
+        0x02,                   // File Maximum File Descriptor count = 2
+        0x06,                   // File Name Length = 6
+        0x46, 0x69, 0x6C, 0x65, 0x31,
+        0x00, // File Name = "File1\NULL"
+    };
+
+    struct pldm_file_descriptor_pdr decodedPdr = {};
+
+    /* Expect error: Invalid input data length*/
+    rc = decode_pldm_file_descriptor_pdr(pdr1.data(), 1, &decodedPdr);
+    EXPECT_EQ(-EOVERFLOW, rc);
+}
+#endif
+
+#ifdef LIBPLDM_API_TESTING
+TEST(decodePldmFileDescriptorPdr, BadTestDataBufferOverLength)
+{
+    int rc;
+
+    /*Un-matched File Name Length*/
+    std::vector<uint8_t> pdr1{
+        // Common PDR Header
+        0x01, 0x0, 0x0, 0x0,      // Record Handle
+        0x01,                     // PDR Header Version
+        PLDM_FILE_DESCRIPTOR_PDR, // PDRType
+        0x01, 0x00,               // Record Change Number
+        0x20, 0x00,               // Data Length = 32 bytes
+        /* PLDM File Descriptor PDR Data*/
+        0x01, 0x00, // Terminus Handle = 0x01
+        0x01, 0x00, // File Identifier = 0x01
+        0x09, 0x00, // Entity Type = Physical | Device File
+        0x01, 0x00, // Entity instance number = 1
+        PLDM_PLATFORM_ENTITY_SYSTEM_CONTAINER_ID,
+        0,                      // Container ID = Overall system
+        0x02, 0,                // Supper Dir File Identifier = 0x0002
+        0x01,                   // File Classification = 0x01 (BootLog)
+        0x00,                   // OEM File Classification = 0x00
+        0x15, 0x00,             // File Capabilities = 0x0015
+        0xff, 0xff, 0xff, 0xff, // File Version = 0xffffffff (Unversioned)
+        0x00, 0x28, 0x00, 0x00, // File Maximum Size = 10KB
+        0x02,                   // File Maximum File Descriptor count = 2
+        0x05,                   // File Name Length = 5
+        0x46, 0x69, 0x6C, 0x65, 0x31,
+        0x00, // File Name = "File1\NULL"
+    };
+
+    struct pldm_file_descriptor_pdr decodedPdr = {};
+
+    /*
+     * Expect error: The original length of the data buffer is larger than
+     * the target extract length.
+     */
+    rc = decode_pldm_file_descriptor_pdr(pdr1.data(), pdr1.size(), &decodedPdr);
+    EXPECT_EQ(-EBADMSG, rc);
+}
+
+TEST(decodePldmFileDescriptorPdr, BadTestDataBufferUnderLength)
+{
+    int rc;
+
+    /*Un-matched OEM File Classification Name Length*/
+    std::vector<uint8_t> pdr1{
+        // Common PDR Header
+        0x01, 0x0, 0x0, 0x0,      // Record Handle
+        0x01,                     // PDR Header Version
+        PLDM_FILE_DESCRIPTOR_PDR, // PDRType
+        0x01, 0x00,               // Record Change Number
+        0x2A, 0x00,               // Data Length = 42 bytes
+        /* PLDM File Descriptor PDR Data*/
+        0x01, 0x00, // Terminus Handle = 0x01
+        0x01, 0x00, // File Identifier = 0x01
+        0x09, 0x00, // Entity Type = Physical | Device File
+        0x01, 0x00, // Entity instance number = 1
+        PLDM_PLATFORM_ENTITY_SYSTEM_CONTAINER_ID,
+        0,                      // Container ID = Overall system
+        0x02, 0,                // Supper Dir File Identifier = 0x0002
+        0x01,                   // File Classification = 0x01 (BootLog)
+        0x01,                   // OEM File Classification = 0x01
+        0x15, 0x00,             // File Capabilities = 0x0015
+        0xff, 0xff, 0xff, 0xff, // File Version = 0xffffffff (Unversioned)
+        0x00, 0x28, 0x00, 0x00, // File Maximum Size = 10KB
+        0x02,                   // File Maximum File Descriptor count = 2
+        0x06,                   // File Name Length = 6
+        0x46, 0x69, 0x6C, 0x65, 0x31,
+        0x00, // File Name = "File1\NULL"
+        0x0B, // OEM File Classification Name Length = 11
+        0x4F, 0x45, 0x4D, 0x20, 0x46, 0x69, 0x6C, 0x65,
+        0x00 // OEM File Classification Name = "OEM File\NULL"
+    };
+
+    struct pldm_file_descriptor_pdr decodedPdr = {};
+
+    /*
+     * Expect error: The original length of the data buffer is smaller than
+     * the target extract length.
+     */
+    rc = decode_pldm_file_descriptor_pdr(pdr1.data(), pdr1.size(), &decodedPdr);
+    EXPECT_EQ(-EOVERFLOW, rc);
+}
+#endif

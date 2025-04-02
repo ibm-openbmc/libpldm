@@ -28,6 +28,27 @@ Change categories:
 
 - PLDM FD responder accepts a PLDM control handle and will register its version.
 
+- base: Define the minimum request bytes for SetTID command.
+
+- pdr: Add pldm_pdr_delete_by_record_handle() API
+
+- Support for building the documentation with doxygen
+
+- base: Add encode req & decode resp for MultipartReceive
+
+- pdr: Add pldm_file_descriptor_pdr struct
+
+- platform: Add decode_pldm_file_descriptor_pdr() and
+  decode_pldm_file_descriptor_pdr_names()
+
+- file: Add encode req & decode resp for DfOpen command.
+
+- file: Add encode req & decode resp for DfClose command.
+
+- file: Add encode req & decode resp for DfHeartbeat command.
+
+- oem: ibm: Modified the state set id for slot effecter and sensor
+
 ### Changed
 
 - dsp: firmware_update: Expand "params" in symbol names
@@ -54,6 +75,16 @@ Change categories:
   No new error values will be returned, but existing error values may be
   returned under new conditions.
 
+- pdr: Indicates success or failure depending on the outcome of the entity
+  association PDR creation
+
+- Register allocation changed for the following APIs:
+
+  - `encode_get_downstream_firmware_parameters_req()`
+  - `encode_get_state_effecter_states_resp()`
+  - `encode_oem_meta_file_io_read_resp()`
+  - `encode_query_downstream_identifiers_req()`
+
 ### Deprecated
 
 ### Removed
@@ -62,6 +93,9 @@ Change categories:
 
 - pdr: Remove PDR if the contained entity to be removed is the last one
 - meson: sizes.h: add includedir to install path
+- pdr: Create entity association PDRs with unique record handle
+- requester: add null check for instance db object in pldm_instance_id_alloc()
+- requester: add null check for instance db object in pldm_instance_id_free()
 
 ### Security
 

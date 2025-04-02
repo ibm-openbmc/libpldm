@@ -13,8 +13,7 @@
 TEST(DecodeOemMetaFileIoWriteReq, testGoodDecodeRequest)
 {
     constexpr const uint8_t postCode[4] = {0x93, 0xe0, 0x00, 0xea};
-    struct pldm_msgbuf _ctx;
-    struct pldm_msgbuf* ctx = &_ctx;
+    PLDM_MSGBUF_DEFINE_P(ctx);
     int rc;
 
     constexpr size_t encodedPayloadLen =
@@ -32,7 +31,7 @@ TEST(DecodeOemMetaFileIoWriteReq, testGoodDecodeRequest)
                                         sizeof(postCode));
     ASSERT_EQ(rc, 0);
 
-    rc = pldm_msgbuf_destroy_consumed(ctx);
+    rc = pldm_msgbuf_complete_consumed(ctx);
     ASSERT_EQ(rc, 0);
 
     constexpr size_t decodedReqLen =
@@ -83,8 +82,7 @@ TEST(DecodeOemMetaFileIoWriteReq, testInvalidDataRequest)
 
 TEST(DecodeOemMetaFileIoReadReq, testGoodDecodeRequest)
 {
-    struct pldm_msgbuf _ctx;
-    struct pldm_msgbuf* ctx = &_ctx;
+    PLDM_MSGBUF_DEFINE_P(ctx);
     int rc;
 
     constexpr size_t payloadLen = PLDM_OEM_META_FILE_IO_READ_REQ_MIN_LENGTH +
@@ -101,7 +99,7 @@ TEST(DecodeOemMetaFileIoReadReq, testGoodDecodeRequest)
     pldm_msgbuf_insert_uint8(ctx, 1);
     pldm_msgbuf_insert_uint16(ctx, 1223);
 
-    rc = pldm_msgbuf_destroy_consumed(ctx);
+    rc = pldm_msgbuf_complete_consumed(ctx);
     ASSERT_EQ(rc, 0);
 
     struct pldm_oem_meta_file_io_read_req req = {};
