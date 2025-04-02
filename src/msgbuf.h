@@ -88,7 +88,9 @@ struct pldm_msgbuf {
  *         personality.
  */
 LIBPLDM_CC_NONNULL
-LIBPLDM_CC_ALWAYS_INLINE int
+LIBPLDM_CC_ALWAYS_INLINE
+LIBPLDM_CC_WARN_UNUSED_RESULT
+int
 // NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
 pldm_msgbuf_init_errno(struct pldm_msgbuf *ctx, size_t minsize, const void *buf,
 		       size_t len)
@@ -125,7 +127,9 @@ pldm_msgbuf_init_errno(struct pldm_msgbuf *ctx, size_t minsize, const void *buf,
  * pointer.
  */
 LIBPLDM_CC_NONNULL
-LIBPLDM_CC_ALWAYS_INLINE int pldm_msgbuf_validate(struct pldm_msgbuf *ctx)
+LIBPLDM_CC_ALWAYS_INLINE
+LIBPLDM_CC_WARN_UNUSED_RESULT
+int pldm_msgbuf_validate(struct pldm_msgbuf *ctx)
 {
 	if (ctx->remaining < 0) {
 		return -EOVERFLOW;
@@ -139,34 +143,38 @@ LIBPLDM_CC_ALWAYS_INLINE int pldm_msgbuf_validate(struct pldm_msgbuf *ctx)
  *
  * @param[in] ctx - pldm_msgbuf context for extractor
  *
- * @return PLDM_SUCCESS iff there are zero bytes of data that remain unread from
- * the buffer and no overflow has occurred. Otherwise, PLDM_ERROR_INVALID_LENGTH
- * indicates that an incorrect sequence of accesses have occurred, and
- * PLDM_ERROR_INVALID_DATA indicates that the provided context was not a valid
- * pointer.
+ * @return 0 iff there are zero bytes of data that remain unread from the buffer
+ * and no overflow has occurred. Otherwise, -EBADMSG if the buffer has not been
+ * completely consumed, or -EOVERFLOW if accesses were attempted beyond the
+ * bounds of the buffer.
  */
 LIBPLDM_CC_NONNULL
-LIBPLDM_CC_ALWAYS_INLINE int pldm_msgbuf_consumed(struct pldm_msgbuf *ctx)
+LIBPLDM_CC_ALWAYS_INLINE
+LIBPLDM_CC_WARN_UNUSED_RESULT
+int pldm_msgbuf_consumed(struct pldm_msgbuf *ctx)
 {
-	if (ctx->remaining != 0) {
+	if (ctx->remaining > 0) {
 		return -EBADMSG;
+	}
+
+	if (ctx->remaining < 0) {
+		return -EOVERFLOW;
 	}
 
 	return 0;
 }
 
 /**
- * @brief Destroy the pldm buf
+ * @brief Complete the pldm_msgbuf instance
  *
  * @param[in] ctx - pldm_msgbuf context for extractor
  *
- * @return PLDM_SUCCESS if all buffer accesses were in-bounds,
- * PLDM_ERROR_INVALID_DATA if the ctx parameter is invalid, or
- * PLDM_ERROR_INVALID_LENGTH if prior accesses would have occurred beyond the
- * bounds of the buffer.
+ * @return 0 if all buffer accesses were in-bounds, -EOVERFLOW otherwise.
  */
 LIBPLDM_CC_NONNULL
-LIBPLDM_CC_ALWAYS_INLINE int pldm_msgbuf_destroy(struct pldm_msgbuf *ctx)
+LIBPLDM_CC_ALWAYS_INLINE
+LIBPLDM_CC_WARN_UNUSED_RESULT
+int pldm_msgbuf_complete(struct pldm_msgbuf *ctx)
 {
 	int valid;
 
@@ -179,19 +187,20 @@ LIBPLDM_CC_ALWAYS_INLINE int pldm_msgbuf_destroy(struct pldm_msgbuf *ctx)
 }
 
 /**
- * @brief Destroy the pldm_msgbuf instance, and check that the underlying buffer
- * has been completely consumed without overflow
+ * @brief Complete the pldm_msgbuf instance, and check that the underlying buffer
+ * has been entirely consumed without overflow
  *
  * @param[in] ctx - pldm_msgbuf context
  *
- * @return PLDM_SUCCESS if all buffer access were in-bounds and completely
- * consume the underlying buffer. Otherwise, PLDM_ERROR_INVALID_DATA if the ctx
- * parameter is invalid, or PLDM_ERROR_INVALID_LENGTH if prior accesses would
- * have occurred byond the bounds of the buffer
+ * @return 0 if all buffer access were in-bounds and completely consume the
+ * underlying buffer. Otherwise, -EBADMSG if the buffer has not been completely
+ * consumed, or -EOVERFLOW if accesses were attempted beyond the bounds of the
+ * buffer.
  */
 LIBPLDM_CC_NONNULL
-LIBPLDM_CC_ALWAYS_INLINE int
-pldm_msgbuf_destroy_consumed(struct pldm_msgbuf *ctx)
+LIBPLDM_CC_ALWAYS_INLINE
+LIBPLDM_CC_WARN_UNUSED_RESULT
+int pldm_msgbuf_complete_consumed(struct pldm_msgbuf *ctx)
 {
 	int consumed;
 
@@ -953,7 +962,7 @@ LIBPLDM_CC_ALWAYS_INLINE int pldm_msgbuf_span_required(struct pldm_msgbuf *ctx,
 						       size_t required,
 						       void **cursor)
 {
-	if (!ctx->cursor || (cursor && *cursor)) {
+	if (!ctx->cursor) {
 		return -EINVAL;
 	}
 
@@ -986,7 +995,7 @@ pldm_msgbuf_span_string_ascii(struct pldm_msgbuf *ctx, void **cursor,
 {
 	intmax_t measured;
 
-	if (!ctx->cursor || (cursor && *cursor)) {
+	if (!ctx->cursor) {
 		return -EINVAL;
 	}
 
@@ -1000,7 +1009,7 @@ pldm_msgbuf_span_string_ascii(struct pldm_msgbuf *ctx, void **cursor,
 		/*
 		 * We have hit the end of the buffer prior to the NUL terminator.
 		 * Optimistically, the NUL terminator was one-beyond-the-end. Setting
-		 * ctx->remaining negative ensures the `pldm_msgbuf_destroy*()` APIs also
+		 * ctx->remaining negative ensures the `pldm_msgbuf_complete*()` APIs also
 		 * return an error.
 		 */
 		ctx->remaining = -1;
@@ -1041,7 +1050,7 @@ pldm_msgbuf_span_string_utf16(struct pldm_msgbuf *ctx, void **cursor,
 	ptrdiff_t measured;
 	void *end;
 
-	if (!ctx->cursor || (cursor && *cursor)) {
+	if (!ctx->cursor) {
 		return -EINVAL;
 	}
 
@@ -1073,7 +1082,7 @@ pldm_msgbuf_span_string_utf16(struct pldm_msgbuf *ctx, void **cursor,
 		/*
 		 * Optimistically, the last required pattern byte was one beyond the end of
 		 * the buffer. Setting ctx->remaining negative ensures the
-		 * `pldm_msgbuf_destroy*()` APIs also return an error.
+		 * `pldm_msgbuf_complete*()` APIs also return an error.
 		 */
 		ctx->remaining = -1;
 		return -EOVERFLOW;
@@ -1114,7 +1123,7 @@ LIBPLDM_CC_NONNULL
 LIBPLDM_CC_ALWAYS_INLINE int
 pldm_msgbuf_span_remaining(struct pldm_msgbuf *ctx, void **cursor, size_t *len)
 {
-	if (!ctx->cursor || *cursor) {
+	if (!ctx->cursor) {
 		return -EINVAL;
 	}
 
@@ -1134,7 +1143,7 @@ LIBPLDM_CC_NONNULL
 LIBPLDM_CC_ALWAYS_INLINE int
 pldm_msgbuf_peek_remaining(struct pldm_msgbuf *ctx, void **cursor, size_t *len)
 {
-	if (!ctx->cursor || *cursor) {
+	if (!ctx->cursor) {
 		return -EINVAL;
 	}
 
@@ -1162,20 +1171,22 @@ LIBPLDM_CC_ALWAYS_INLINE int pldm_msgbuf_skip(struct pldm_msgbuf *ctx,
 	}
 #endif
 
-	if (ctx->remaining < INTMAX_MIN + (intmax_t)count) {
-		return -EOVERFLOW;
+	if (ctx->remaining >= (intmax_t)count) {
+		ctx->cursor += count;
+		ctx->remaining -= (intmax_t)count;
+		return 0;
 	}
-	ctx->remaining -= (intmax_t)count;
-	if (ctx->remaining < 0) {
-		return -EOVERFLOW;
-	}
-	ctx->cursor += count;
 
-	return 0;
+	if (ctx->remaining >= INTMAX_MIN + (intmax_t)count) {
+		ctx->remaining -= (intmax_t)count;
+	}
+
+	return -EOVERFLOW;
 }
 
 /**
- * Return the number of bytes used in a msgbuf instance.
+ * @brief Complete the pldm_msgbuf instance and return the number of bytes
+ * consumed.
  *
  * @param ctx - The msgbuf.
  * @param orig_len - The original size of the msgbuf, the `len` argument passed to
@@ -1185,13 +1196,17 @@ LIBPLDM_CC_ALWAYS_INLINE int pldm_msgbuf_skip(struct pldm_msgbuf *ctx,
  * This can be called after a number of pldm_msgbuf_insert...() calls to
  * determine the total size that was written.
  *
+ * @return 0 on success, -EOVERFLOW if an implausible orig_len was provided or
+ * an out-of-bounds access occurred.
  */
 LIBPLDM_CC_NONNULL
-LIBPLDM_CC_ALWAYS_INLINE int pldm_msgbuf_destroy_used(struct pldm_msgbuf *ctx,
-						      size_t orig_len,
-						      size_t *ret_used_len)
+LIBPLDM_CC_ALWAYS_INLINE
+LIBPLDM_CC_WARN_UNUSED_RESULT
+int pldm_msgbuf_complete_used(struct pldm_msgbuf *ctx, size_t orig_len,
+			      size_t *ret_used_len)
 {
 	int rc;
+
 	rc = pldm_msgbuf_validate(ctx);
 	if (rc) {
 		return rc;
