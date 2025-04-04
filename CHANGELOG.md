@@ -34,6 +34,8 @@ Change categories:
 
 - Support for building the documentation with doxygen
 
+- pdr: Add pldm_delete_by_effecter_id() API
+
 ### Changed
 
 - dsp: firmware_update: Expand "params" in symbol names

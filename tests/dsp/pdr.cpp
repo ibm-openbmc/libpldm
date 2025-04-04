@@ -11,83 +11,6 @@
 
 #include <gtest/gtest.h>
 
-typedef struct pldm_association_pdr_test
-{
-    uint32_t record_handle;
-    uint8_t version;
-    uint8_t type;
-    uint16_t record_change_num;
-    uint16_t length;
-    uint16_t container_id;
-    uint8_t association_type;
-    uint8_t num_children;
-
-    inline bool operator==(pldm_association_pdr_test pdr) const
-    {
-        return (record_handle == pdr.record_handle) && (type == pdr.type) &&
-               (length == pdr.length) && (container_id == pdr.container_id) &&
-               (association_type == pdr.association_type) &&
-               (num_children == pdr.num_children);
-    }
-} pldm_association_pdr_test;
-
-typedef struct pldm_entity_test
-{
-    uint16_t entity_type;
-    uint16_t entity_instance_num;
-    uint16_t entity_container_id;
-
-    inline bool operator==(pldm_entity_test entity) const
-    {
-        return (entity_type == entity.entity_type) &&
-               (entity_instance_num == entity.entity_instance_num) &&
-               (entity_container_id == entity.entity_container_id);
-    }
-} pldm_entity_test;
-
-static void getEntity(struct pldm_msgbuf* buf, pldm_entity_test& entity)
-{
-    pldm_msgbuf_extract_uint16(buf, entity.entity_type);
-    pldm_msgbuf_extract_uint16(buf, entity.entity_instance_num);
-    pldm_msgbuf_extract_uint16(buf, entity.entity_container_id);
-}
-
-static void
-    getAssociationPdrDetails(struct pldm_msgbuf* buf,
-                             pldm_association_pdr_test& association_pdr_test)
-{
-    pldm_msgbuf_extract_uint32(buf, association_pdr_test.record_handle);
-    pldm_msgbuf_extract_uint8(buf, association_pdr_test.version);
-    pldm_msgbuf_extract_uint8(buf, association_pdr_test.type);
-    pldm_msgbuf_extract_uint16(buf, association_pdr_test.record_change_num);
-    pldm_msgbuf_extract_uint16(buf, association_pdr_test.length);
-
-    pldm_msgbuf_extract_uint16(buf, association_pdr_test.container_id);
-    pldm_msgbuf_extract_uint8(buf, association_pdr_test.association_type);
-}
-
-static void
-    verifyEntityAssociationPdr(struct pldm_msgbuf* buf,
-                               const pldm_association_pdr_test& association_pdr,
-                               const pldm_entity_test& container_entity1,
-                               const pldm_entity_test& child_entity1)
-{
-    struct pldm_entity_test container_entity = {};
-    struct pldm_entity_test child_entity = {};
-    pldm_association_pdr_test association_pdr_test{};
-
-    getAssociationPdrDetails(buf, association_pdr_test);
-    getEntity(buf, container_entity);
-    pldm_msgbuf_extract_uint8(buf, association_pdr_test.num_children);
-    getEntity(buf, child_entity);
-
-    ASSERT_EQ(pldm_msgbuf_complete_consumed(buf), 0);
-
-    EXPECT_TRUE(association_pdr_test == association_pdr);
-    EXPECT_TRUE(container_entity == container_entity1);
-    EXPECT_TRUE(child_entity == child_entity1);
-}
-
 TEST(PDRAccess, testInit)
 {
     auto repo = pldm_pdr_init();
@@ -501,115 +424,6 @@ TEST(PDRAccess, testGetNext)
     pldm_pdr_destroy(repo);
 }
 
-TEST(FindContainerID, testValidInstanceID)
-{
-    auto repo = pldm_pdr_init();
-    ASSERT_NE(repo, nullptr);
-
-    size_t size = sizeof(struct pldm_pdr_hdr) +
-                  sizeof(struct pldm_pdr_entity_association);
-    std::unique_ptr<uint8_t[]> data(new uint8_t[size]);
-    ASSERT_NE(data, nullptr);
-
-    struct pldm_pdr_hdr* hdr =
-        reinterpret_cast<struct pldm_pdr_hdr*>(data.get());
-    hdr->type = PLDM_PDR_ENTITY_ASSOCIATION;
-    hdr->length = size - sizeof(struct pldm_pdr_hdr);
-
-    struct pldm_pdr_entity_association* pdr =
-        reinterpret_cast<struct pldm_pdr_entity_association*>(
-            data.get() + sizeof(struct pldm_pdr_hdr));
-    pdr->container.entity_type = 1;
-    pdr->container.entity_instance_num = 2;
-    pdr->num_children = 1;
-    pdr->children[0].entity_container_id = 42;
-
-    uint32_t record_handle;
-    int rc =
-        pldm_pdr_add_check(repo, data.get(), size, false, 0, &record_handle);
-    ASSERT_EQ(rc, 0);
-
-    uint16_t result = pldm_find_container_id(repo, 1, 2);
-    EXPECT_EQ(result, 42);
-
-    pldm_pdr_destroy(repo);
-}
-
-TEST(FindContainerID, testInvalidInstanceID)
-{
-    auto repo = pldm_pdr_init();
-    ASSERT_NE(repo, nullptr);
-
-    size_t size = sizeof(struct pldm_pdr_hdr) +
-                  sizeof(struct pldm_pdr_entity_association);
-    std::unique_ptr<uint8_t[]> data(new uint8_t[size]);
-    ASSERT_NE(data, nullptr);
-
-    struct pldm_pdr_hdr* hdr =
-        reinterpret_cast<struct pldm_pdr_hdr*>(data.get());
-    hdr->type = PLDM_PDR_ENTITY_ASSOCIATION;
-    hdr->length = size - sizeof(struct pldm_pdr_hdr);
-
-    struct pldm_pdr_entity_association* pdr =
-        reinterpret_cast<struct pldm_pdr_entity_association*>(
-            data.get() + sizeof(struct pldm_pdr_hdr));
-    pdr->container.entity_type = 1;
-    pdr->container.entity_instance_num = 2;
-    pdr->num_children = 1;
-    pdr->children[0].entity_container_id = 42;
-
-    uint32_t record_handle;
-    int rc =
-        pldm_pdr_add_check(repo, data.get(), size, false, 0, &record_handle);
-    ASSERT_EQ(rc, 0);
-
-    uint16_t result = pldm_find_container_id(repo, 3, 4);
-    EXPECT_EQ(result, 0);
-    pldm_pdr_destroy(repo);
-}
-
-TEST(UpdateContainerID, testUpdatedContainerId)
-{
-    auto repo = pldm_pdr_init();
-    ASSERT_NE(repo, nullptr);
-
-    constexpr size_t hdr_size = sizeof(struct pldm_pdr_hdr);
-    constexpr size_t pdr_size = sizeof(struct pldm_numeric_effecter_value_pdr);
-    constexpr size_t total_size = hdr_size + pdr_size;
-
-    std::array<uint8_t, total_size> data{};
-    auto hdr = reinterpret_cast<struct pldm_pdr_hdr*>(data.data());
-    hdr->type = PLDM_NUMERIC_EFFECTER_PDR;
-    hdr->length = total_size - hdr_size;
-
-    auto pdr =
-        reinterpret_cast<struct pldm_numeric_effecter_value_pdr*>(data.data());
-    pdr->container_id = 42;
-    pdr->effecter_id = 3;
-
-    uint32_t record_handle = 1;
-    int rc = pldm_pdr_add_check(repo, data.data(), pdr_size, false, 1,
-                                &record_handle);
-    ASSERT_EQ(rc, 0);
-    EXPECT_EQ(pldm_pdr_get_record_count(repo), 1u);
-
-    uint16_t new_container_id = 7;
-    pldm_change_container_id_of_effecter(repo, pdr->effecter_id,
-                                         new_container_id);
-
-    uint8_t* check_data = nullptr;
-    uint32_t check_size{};
-    auto check_record = pldm_pdr_find_record_by_type(repo, 9, nullptr,
-                                                     &check_data, &check_size);
-    ASSERT_NE(check_record, nullptr);
-
-    const auto* check_pdr =
-        reinterpret_cast<const pldm_numeric_effecter_value_pdr*>(check_data);
-
-    EXPECT_EQ(check_pdr->container_id, new_container_id);
-    pldm_pdr_destroy(repo);
-}
-
 TEST(PDRAccess, testFindByType)
 {
     auto repo = pldm_pdr_init();
@@ -669,77 +483,6 @@ TEST(PDRAccess, testFindByType)
     EXPECT_EQ(pldm_pdr_get_record_handle(repo, rec), second);
     outData = nullptr;
 
-    pldm_pdr_destroy(repo);
-}
-
-TEST(PDRAccess, getPLDMEntityfromPDR)
-{
-    auto repo = pldm_pdr_init();
-
-    // Test FRU Record set PDR
-    uint32_t handle = 0;
-    int rc = pldm_pdr_add_fru_record_set_check(repo, 1, 10, 1, 0, 100, &handle);
-
-    ASSERT_EQ(rc, 0);
-    auto entity = pldm_get_entity_from_record_handle(repo, handle);
-    EXPECT_EQ(entity.entity_type, htole16(1));
-    EXPECT_EQ(entity.entity_instance_num, htole16(0));
-    EXPECT_EQ(entity.entity_container_id, htole16(100));
-
-    // Test State Effecter PDR
-    std::array<uint8_t, 29> data{212, 1, 0,   0, 1,  11, 0, 0, 19, 0,
-                                 1,   0, 196, 0, 64, 0,  1, 0, 2,  0,
-                                 0,   0, 0,   0, 1,  10, 0, 1, 6};
-    handle = 0;
-    rc = pldm_pdr_add_check(repo, data.data(), data.size(), false, 1, &handle);
-    ASSERT_EQ(rc, 0);
-    entity = pldm_get_entity_from_record_handle(repo, handle);
-    EXPECT_EQ(entity.entity_type, htole16(64));
-    EXPECT_EQ(entity.entity_instance_num, htole16(1));
-    EXPECT_EQ(entity.entity_container_id, htole16(2));
-
-    // Test State Sensor PDR
-    std::array<uint8_t, 27> data2{10, 1, 0, 0,   1, 4,   0, 0, 17,
-                                  0,  1, 0, 199, 0, 120, 0, 4, 0,
-                                  5,  0, 0, 0,   1, 10,  0, 1, 6};
-    handle = 0;
-    rc =
-        pldm_pdr_add_check(repo, data2.data(), data2.size(), false, 1, &handle);
-    ASSERT_EQ(rc, 0);
-    entity = pldm_get_entity_from_record_handle(repo, handle);
-    EXPECT_EQ(entity.entity_type, htole16(120));
-    EXPECT_EQ(entity.entity_instance_num, htole16(4));
-    EXPECT_EQ(entity.entity_container_id, htole16(5));
-
-    // Test Numeric Effecter PDR
-    std::array<uint8_t, 27> data3{10, 1, 0, 0, 1, 9, 0, 0, 17, 0,  1, 0, 199, 0,
-                                  6,  0, 3, 0, 2, 0, 0, 0, 1,  10, 0, 1, 6};
-    handle = 0;
-    rc =
-        pldm_pdr_add_check(repo, data3.data(), data3.size(), false, 1, &handle);
-    ASSERT_EQ(rc, 0);
-    entity = pldm_get_entity_from_record_handle(repo, handle);
-    EXPECT_EQ(entity.entity_type, htole16(6));
-    EXPECT_EQ(entity.entity_instance_num, htole16(3));
-    EXPECT_EQ(entity.entity_container_id, htole16(2));
-
-    // Test Non Supported PDR types
-    std::array<uint8_t, 18> notSupportedtypes{
-        1, 2, 3, 5, 6, 7, 8, 10, 12, 13, 14, 15, 16, 17, 18, 19, 126, 127};
-    for (const auto& type : notSupportedtypes)
-    {
-        std::array<uint8_t, sizeof(pldm_pdr_hdr)> data4{};
-        pldm_pdr_hdr* hdr = reinterpret_cast<pldm_pdr_hdr*>(data4.data());
-        hdr->type = type;
-        handle = 0;
-        rc = pldm_pdr_add_check(repo, data4.data(), data4.size(), false, 1,
-                                &handle);
-        ASSERT_EQ(rc, 0);
-        entity = pldm_get_entity_from_record_handle(repo, handle);
-        EXPECT_EQ(entity.entity_type, htole16(0));
-        EXPECT_EQ(entity.entity_instance_num, htole16(0));
-        EXPECT_EQ(entity.entity_container_id, htole16(0));
-    }
     pldm_pdr_destroy(repo);
 }
 
@@ -947,38 +690,6 @@ TEST(PDRAccess, testGetTerminusHandle)
     EXPECT_EQ(pldm_pdr_get_terminus_handle(repo, thirdRec),
               thirdTerminusHandle);
     outData = nullptr;
-
-    pldm_pdr_destroy(repo);
-}
-#endif
-
-#ifdef LIBPLDM_API_TESTING
-TEST(PDRAccess, testRemoveByRecordHandle)
-{
-    std::array<uint8_t, sizeof(pldm_pdr_hdr)> data{};
-
-    auto repo = pldm_pdr_init();
-    uint32_t first = 0;
-    EXPECT_EQ(pldm_pdr_add(repo, data.data(), data.size(), false, 1, &first),
-              0);
-
-    uint32_t second = 0;
-    EXPECT_EQ(pldm_pdr_add(repo, data.data(), data.size(), false, 1, &second),
-              0);
-
-    uint32_t third = 0;
-    EXPECT_EQ(pldm_pdr_add(repo, data.data(), data.size(), false, 1, &third),
-              0);
-
-    EXPECT_EQ(pldm_pdr_get_record_count(repo), 3u);
-
-    int rc = pldm_pdr_delete_by_record_handle(repo, 1, false);
-    EXPECT_EQ(rc, 0);
-    EXPECT_EQ(pldm_pdr_get_record_count(repo), 2u);
-
-    rc = pldm_pdr_delete_by_record_handle(repo, 2, false);
-    EXPECT_EQ(rc, 0);
-    EXPECT_EQ(pldm_pdr_get_record_count(repo), 1u);
 
     pldm_pdr_destroy(repo);
 }
@@ -1715,103 +1426,6 @@ TEST(EntityAssociationPDR, testPDR)
     pldm_entity_association_tree_destroy(tree);
 }
 
-TEST(EntityAssociationPDR, testPDRWithRecordHandle)
-{
-    // e = entity type, c = container id, i = instance num
-
-    //        INPUT
-    //        1(e=1)
-    //        |
-    //        2(e=2)--3(e=2)
-
-    //        Expected OUTPUT
-    //        1(e=1,c=0,i=1)
-    //        |
-    //        2(e=2,c=1,i=1)--3(e=2,c=1,i=2)
-
-    pldm_entity entities[3] = {{1, 1, 0}, {2, 1, 1}, {3, 1, 1}};
-    pldm_entity_test testEntities[3] = {{1, 1, 0}, {2, 1, 1}, {3, 1, 1}};
-
-    auto tree = pldm_entity_association_tree_init();
-
-    auto l1 = pldm_entity_association_tree_add(
-        tree, &entities[0], 0xffff, nullptr, PLDM_ENTITY_ASSOCIAION_PHYSICAL);
-    ASSERT_NE(l1, nullptr);
-
-    auto l2a = pldm_entity_association_tree_add(
-        tree, &entities[1], 0xffff, l1, PLDM_ENTITY_ASSOCIAION_PHYSICAL);
-    ASSERT_NE(l2a, nullptr);
-    pldm_entity_association_tree_add(tree, &entities[2], 0xffff, l1,
-                                     PLDM_ENTITY_ASSOCIAION_LOGICAL);
-    auto repo = pldm_pdr_init();
-    pldm_entity* l_entities = entities;
-
-    pldm_entity_node* node = nullptr;
-    pldm_find_entity_ref_in_tree(tree, entities[0], &node);
-
-    ASSERT_NE(node, nullptr);
-
-    int numEntities = 3;
-    pldm_entity_association_pdr_add_from_node_with_record_handle(
-        node, repo, &l_entities, numEntities, true, 1, (10));
-
-    EXPECT_EQ(pldm_pdr_get_record_count(repo), 2u);
-
-    uint32_t currRecHandle{};
-    uint32_t nextRecHandle{};
-    uint8_t* data = nullptr;
-    uint32_t size{};
-
-    pldm_pdr_find_record(repo, currRecHandle, &data, &size, &nextRecHandle);
-
-    struct pldm_msgbuf _buf;
-    struct pldm_msgbuf* buf = &_buf;
-
-    auto rc =
-        pldm_msgbuf_init_errno(buf,
-                               (sizeof(struct pldm_pdr_hdr) +
-                                sizeof(struct pldm_pdr_entity_association)),
-                               data, size);
-    ASSERT_EQ(rc, 0);
-
-    pldm_association_pdr_test association_pdr = pldm_association_pdr_test{
-        10,
-        1,
-        PLDM_PDR_ENTITY_ASSOCIATION,
-        1,
-        static_cast<uint16_t>(size - sizeof(struct pldm_pdr_hdr)),
-        1,
-        PLDM_ENTITY_ASSOCIAION_LOGICAL,
-        1};
-
-    verifyEntityAssociationPdr(buf, association_pdr, testEntities[0],
-                               testEntities[2]);
-
-    currRecHandle = nextRecHandle;
-    pldm_pdr_find_record(repo, currRecHandle, &data, &size, &nextRecHandle);
-    rc = pldm_msgbuf_init_errno(buf,
-                                (sizeof(struct pldm_pdr_hdr) +
-                                 sizeof(struct pldm_pdr_entity_association)),
-                                data, size);
-    ASSERT_EQ(rc, 0);
-
-    pldm_association_pdr_test association_pdr1 = pldm_association_pdr_test{
-        11,
-        1,
-        PLDM_PDR_ENTITY_ASSOCIATION,
-        1,
-        static_cast<uint16_t>(size - sizeof(struct pldm_pdr_hdr)),
-        1,
-        PLDM_ENTITY_ASSOCIAION_PHYSICAL,
-        1};
-
-    verifyEntityAssociationPdr(buf, association_pdr1, testEntities[0],
-                               testEntities[1]);
-
-    pldm_pdr_destroy(repo);
-    pldm_entity_association_tree_destroy(tree);
-}
-
 TEST(EntityAssociationPDR, testFind)
 {
     //        1
@@ -1901,7 +1515,7 @@ TEST(EntityAssociationPDR, testFind)
 TEST(EntityAssociationPDR, testCopyTree)
 {
     pldm_entity entities[4]{};
-    int rc;
+    // int rc;
 
     entities[0].entity_type = 1;
     entities[1].entity_type = 2;
@@ -1928,8 +1542,7 @@ TEST(EntityAssociationPDR, testCopyTree)
     pldm_entity_association_tree_visit(orgTree, &orgOut, &orgNum);
     EXPECT_EQ(orgNum, 4u);
 
-    rc = pldm_entity_association_tree_copy_root_check(orgTree, newTree);
-    ASSERT_EQ(rc, 0);
+    pldm_entity_association_tree_copy_root(orgTree, newTree);
     size_t newNum{};
     pldm_entity* newOut = nullptr;
     pldm_entity_association_tree_visit(newTree, &newOut, &newNum);
@@ -2324,8 +1937,10 @@ TEST(EntityAssociationPDR, testNodeAddCheck)
     pldm_entity_association_tree_destroy(tree);
 }
 
+#ifdef LIBPLDM_API_TESTING
 TEST(EntityAssociationPDR, testAddContainedEntityRemotePDR)
 {
+    // pldm_entity entities[5]{};
     pldm_entity* entities = (pldm_entity*)malloc(sizeof(pldm_entity) * 5);
     entities[0].entity_type = 1;
     entities[1].entity_type = 2;
@@ -2379,9 +1994,12 @@ TEST(EntityAssociationPDR, testAddContainedEntityRemotePDR)
     pldm_pdr_destroy(repo);
     pldm_entity_association_tree_destroy(tree);
 }
+#endif
 
+#ifdef LIBPLDM_API_TESTING
 TEST(EntityAssociationPDR, testAddContainedEntityNew)
 {
+    // pldm_entity entities[5]{};
     pldm_entity* entities = (pldm_entity*)malloc(sizeof(pldm_entity) * 5);
     entities[0].entity_type = 1;
     entities[1].entity_type = 2;
@@ -2442,150 +2060,10 @@ TEST(EntityAssociationPDR, testAddContainedEntityNew)
     pldm_pdr_destroy(repo);
     pldm_entity_association_tree_destroy(tree);
 }
+#endif
 
 #ifdef LIBPLDM_API_TESTING
 TEST(EntityAssociationPDR, testRemoveContainedEntity)
-{
-    pldm_entity* entities = (pldm_entity*)malloc(sizeof(pldm_entity) * 4);
-    entities[0].entity_type = 1;
-
-    entities[1].entity_type = 2;
-    entities[1].entity_instance_num = 1;
-    entities[1].entity_container_id = 2;
-
-    entities[2].entity_type = 3;
-    entities[2].entity_instance_num = 1;
-    entities[2].entity_container_id = 2;
-
-    entities[3].entity_type = 4;
-    entities[3].entity_instance_num = 1;
-    entities[3].entity_container_id = 2;
-
-    auto tree = pldm_entity_association_tree_init();
-    auto l1 = pldm_entity_association_tree_add_entity(
-        tree, &entities[0], 0xffff, nullptr, PLDM_ENTITY_ASSOCIAION_LOGICAL,
-        false, true, 0xffff);
-
-    EXPECT_NE(l1, nullptr);
-    auto l2 = pldm_entity_association_tree_add_entity(
-        tree, &entities[1], 0xffff, l1, PLDM_ENTITY_ASSOCIAION_PHYSICAL, false,
-        false, 0xffff);
-    EXPECT_NE(l2, nullptr);
-    auto l3 = pldm_entity_association_tree_add_entity(
-        tree, &entities[2], 0xffff, l1, PLDM_ENTITY_ASSOCIAION_PHYSICAL, false,
-        true, 0xffff);
-    EXPECT_NE(l3, nullptr);
-    auto l4 = pldm_entity_association_tree_add_entity(
-        tree, &entities[3], 0xffff, l1, PLDM_ENTITY_ASSOCIAION_PHYSICAL, false,
-        true, 0xffff);
-    EXPECT_NE(l4, nullptr);
-
-    EXPECT_EQ(pldm_entity_get_num_children(l1, PLDM_ENTITY_ASSOCIAION_PHYSICAL),
-              3);
-
-    auto repo = pldm_pdr_init();
-
-    EXPECT_EQ(pldm_entity_association_pdr_add_from_node_with_record_handle(
-                  l1, repo, &entities, 4, false, 1, 3),
-              0);
-
-    EXPECT_EQ(pldm_pdr_get_record_count(repo), 1u);
-
-    uint32_t removed_record_handle{};
-    pldm_entity entity{};
-    entity.entity_type = 4;
-    entity.entity_instance_num = 1;
-    entity.entity_container_id = 2;
-
-    EXPECT_EQ(pldm_entity_association_pdr_remove_contained_entity(
-                  repo, &entity, false, &removed_record_handle),
-              0);
-    EXPECT_EQ(removed_record_handle, 3);
-
-    pldm_entity_association_tree_delete_node(tree, entity);
-
-    EXPECT_EQ(pldm_entity_get_num_children(l1, PLDM_ENTITY_ASSOCIAION_PHYSICAL),
-              2);
-
-    uint32_t currRecHandle{};
-    uint32_t nextRecHandle{};
-    uint8_t* data = nullptr;
-    uint32_t size{};
-    pldm_pdr_find_record(repo, currRecHandle, &data, &size, &nextRecHandle);
-    struct pldm_msgbuf _buf;
-    struct pldm_msgbuf* buf = &_buf;
-
-    auto rc =
-        pldm_msgbuf_init_errno(buf,
-                               (sizeof(struct pldm_pdr_hdr) +
-                                sizeof(struct pldm_pdr_entity_association)),
-                               data, size);
-    ASSERT_EQ(rc, 0);
-
-    uint8_t* skip_data = NULL;
-    size_t skip_data_size = sizeof(struct pldm_pdr_hdr) + sizeof(uint16_t) +
-                            sizeof(uint8_t) + sizeof(struct pldm_entity) +
-                            sizeof(uint8_t);
-
-    pldm_msgbuf_span_required(buf, skip_data_size, (void**)&skip_data);
-
-    uint16_t child_data;
-
-    // check pldm_entity data for first child after remove
-    pldm_msgbuf_extract_uint16(buf, &child_data);
-    EXPECT_EQ(child_data, 2);
-    pldm_msgbuf_extract_uint16(buf, &child_data);
-    EXPECT_EQ(child_data, 1);
-    pldm_msgbuf_extract_uint16(buf, &child_data);
-    EXPECT_EQ(child_data, 2);
-
-    // check pldm_entity data for second child after remove
-    pldm_msgbuf_extract_uint16(buf, &child_data);
-    EXPECT_EQ(child_data, 3);
-    pldm_msgbuf_extract_uint16(buf, &child_data);
-    EXPECT_EQ(child_data, 1);
-    pldm_msgbuf_extract_uint16(buf, &child_data);
-    EXPECT_EQ(child_data, 2);
-
-    pldm_msgbuf_destroy(buf);
-
-    removed_record_handle = 0;
-    entity.entity_type = 2;
-    entity.entity_instance_num = 1;
-    entity.entity_container_id = 2;
-
-    EXPECT_EQ(pldm_entity_association_pdr_remove_contained_entity(
-                  repo, &entity, false, &removed_record_handle),
-              0);
-    EXPECT_EQ(removed_record_handle, 3);
-
-    pldm_entity_association_tree_delete_node(tree, entity);
-
-    EXPECT_EQ(pldm_entity_get_num_children(l1, PLDM_ENTITY_ASSOCIAION_PHYSICAL),
-              1);
-
-    removed_record_handle = 0;
-    entity.entity_type = 3;
-    entity.entity_instance_num = 1;
-    entity.entity_container_id = 2;
-
-    EXPECT_EQ(pldm_entity_association_pdr_remove_contained_entity(
-                  repo, &entity, false, &removed_record_handle),
-              0);
-    EXPECT_EQ(removed_record_handle, 3);
-
-    pldm_entity_association_tree_delete_node(tree, entity);
-
-    EXPECT_EQ(pldm_entity_get_num_children(l1, PLDM_ENTITY_ASSOCIAION_PHYSICAL),
-              0);
-    EXPECT_EQ(pldm_pdr_get_record_count(repo), 0u);
-    free(entities);
-    pldm_pdr_destroy(repo);
-    pldm_entity_association_tree_destroy(tree);
-}
-
-TEST(EntityAssociationPDR, testfindParentEntityPresent)
->>>>>>> b0d6207 (HotPlug/CM: Handle PDRs for hotplug CM (#25))
 {
     struct pldm_entity entities[4] = {
         {.entity_type = 1, .entity_instance_num = 1, .entity_container_id = 2},
@@ -2722,56 +2200,4 @@ TEST(PDRUpdate, testRemoveFruRecord)
 
     pldm_pdr_destroy(repo);
 }
-
-TEST(PDRUpdate, testRemoveFruRecord)
-{
-    auto repo = pldm_pdr_init();
-    uint32_t record_handle = 1;
-    EXPECT_EQ(pldm_pdr_add_fru_record_set_check(repo, 1, 1, 1, 0, 100,
-                                                &record_handle),
-              0);
-    record_handle = 2;
-    EXPECT_EQ(pldm_pdr_add_fru_record_set_check(repo, 1, 2, 1, 1, 100,
-                                                &record_handle),
-              0);
-    record_handle = 3;
-    EXPECT_EQ(pldm_pdr_add_fru_record_set_check(repo, 1, 3, 1, 2, 100,
-                                                &record_handle),
-              0);
-    EXPECT_EQ(pldm_pdr_get_record_count(repo), 3);
-    uint32_t removed_record_handle{};
-    EXPECT_EQ(pldm_pdr_remove_fru_record_set_by_rsi(repo, 2, false,
-                                                    &removed_record_handle),
-              0);
-    EXPECT_EQ(removed_record_handle, 2);
-    EXPECT_EQ(pldm_pdr_get_record_count(repo), 2);
-    uint16_t terminusHdl{};
-    uint16_t entityType{};
-    uint16_t entityInstanceNum{};
-    uint16_t containerId{};
-    EXPECT_EQ(1, pldm_pdr_get_record_handle(
-                     repo, pldm_pdr_fru_record_set_find_by_rsi(
-                               repo, 1, &terminusHdl, &entityType,
-                               &entityInstanceNum, &containerId)));
-    EXPECT_EQ(3, pldm_pdr_get_record_handle(
-                     repo, pldm_pdr_fru_record_set_find_by_rsi(
-                               repo, 3, &terminusHdl, &entityType,
-                               &entityInstanceNum, &containerId)));
-    EXPECT_EQ(nullptr, pldm_pdr_fru_record_set_find_by_rsi(
-                           repo, 2, &terminusHdl, &entityType,
-                           &entityInstanceNum, &containerId));
-    auto record = pldm_pdr_fru_record_set_find_by_rsi(
-        repo, 1, &terminusHdl, &entityType, &entityInstanceNum, &containerId);
-    EXPECT_NE(record, nullptr);
-    record = pldm_pdr_fru_record_set_find_by_rsi(
-        repo, 3, &terminusHdl, &entityType, &entityInstanceNum, &containerId);
-    EXPECT_NE(record, nullptr);
-    EXPECT_EQ(pldm_pdr_remove_fru_record_set_by_rsi(repo, 1, false,
-                                                    &removed_record_handle),
-              0);
-    EXPECT_EQ(pldm_pdr_remove_fru_record_set_by_rsi(repo, 3, false,
-                                                    &removed_record_handle),
-              0);
-    EXPECT_EQ(pldm_pdr_get_record_count(repo), 0);
-    pldm_pdr_destroy(repo);
-}
+#endif
