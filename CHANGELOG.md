@@ -19,6 +19,40 @@ Change categories:
 
 ### Added
 
+- utils: Introduce `pldm_edac_crc32()`
+
+### Changed
+
+### Deprecated
+
+- utils: Deprecate `is_time_legal()`
+- utils: Deprecate `is_transfer_flag_valid()`
+
+- utils: Deprecate `crc32()`
+
+  Users of `crc32()` should move to `pldm_edac_crc32()`
+
+### Removed
+
+- requester: Remove related deprecated APIs
+
+  Remove all of:
+
+  - `pldm_close()`
+  - `pldm_open()`
+  - `pldm_recv()`
+  - `pldm_recv_any()`
+  - `pldm_send()`
+  - `pldm_send_recv()`
+
+### Fixed
+
+### Security
+
+## [0.12.0] 2025-04-05
+
+### Added
+
 - Add Firmware Device side firmware_update encode/decode functions
 
 - Add firmware update FD responder
