@@ -841,14 +841,14 @@ bool pldm_is_current_parent_child(pldm_entity_node *parent, pldm_entity *node)
 	return false;
 }
 
-static int entity_association_pdr_add_children(
+static int64_t entity_association_pdr_add_children(
 	pldm_entity_node *curr, pldm_pdr *repo, uint16_t size,
 	uint8_t contained_count, uint8_t association_type, bool is_remote,
-	uint16_t terminus_handle, uint32_t *record_handle)
+	uint16_t terminus_handle, uint32_t record_handle)
 {
 	uint8_t *start;
 	uint8_t *pdr;
-	int rc;
+	int64_t rc;
 
 	pdr = calloc(1, size);
 	if (!pdr) {
@@ -859,7 +859,7 @@ static int entity_association_pdr_add_children(
 
 	struct pldm_pdr_hdr *hdr = (struct pldm_pdr_hdr *)start;
 	hdr->version = 1;
-	hdr->record_handle = *record_handle;
+	hdr->record_handle = record_handle;
 	hdr->type = PLDM_PDR_ENTITY_ASSOCIATION;
 	hdr->record_change_num = 0;
 	hdr->length = htole16(size - sizeof(struct pldm_pdr_hdr));
@@ -895,21 +895,28 @@ static int entity_association_pdr_add_children(
 	}
 
 	rc = pldm_pdr_add(repo, pdr, size, is_remote, terminus_handle,
-			  record_handle);
+			  &record_handle);
 	free(pdr);
-	return rc;
+	return (rc < 0) ? rc : record_handle;
 }
 
-static int entity_association_pdr_add_entry(pldm_entity_node *curr,
-					    pldm_pdr *repo, bool is_remote,
-					    uint16_t terminus_handle,
-					    uint32_t *record_handle)
+static int64_t entity_association_pdr_add_entry(pldm_entity_node *curr,
+						pldm_pdr *repo, bool is_remote,
+						uint16_t terminus_handle,
+						uint32_t record_handle)
 {
 	uint8_t num_logical_children = pldm_entity_get_num_children(
 		curr, PLDM_ENTITY_ASSOCIAION_LOGICAL);
 	uint8_t num_physical_children = pldm_entity_get_num_children(
 		curr, PLDM_ENTITY_ASSOCIAION_PHYSICAL);
-	int rc;
+	int64_t rc;
+
+	if (!num_logical_children && !num_physical_children) {
+		if (record_handle == 0) {
+			return -EINVAL;
+		}
+		return record_handle - 1;
+	}
 
 	if (num_logical_children) {
 		uint16_t logical_pdr_size =
@@ -924,7 +931,12 @@ static int entity_association_pdr_add_entry(pldm_entity_node *curr,
 		if (rc < 0) {
 			return rc;
 		}
-		*record_handle += 1;
+		if (num_physical_children) {
+			if (rc >= UINT32_MAX) {
+				return -EOVERFLOW;
+			}
+			record_handle = rc + 1;
+		}
 	}
 
 	if (num_physical_children) {
@@ -940,10 +952,10 @@ static int entity_association_pdr_add_entry(pldm_entity_node *curr,
 		if (rc < 0) {
 			return rc;
 		}
-		*record_handle += 1;
+		record_handle = rc;
 	}
 
-	return 0;
+	return record_handle;
 }
 
 static bool is_present(pldm_entity entity, pldm_entity **entities,
@@ -962,39 +974,56 @@ static bool is_present(pldm_entity entity, pldm_entity **entities,
 	return false;
 }
 
-static int entity_association_pdr_add(pldm_entity_node *curr, pldm_pdr *repo,
-				      pldm_entity **entities,
-				      size_t num_entities, bool is_remote,
-				      uint16_t terminus_handle,
-				      uint32_t *record_handle)
+static int64_t entity_association_pdr_add(pldm_entity_node *curr,
+					  pldm_pdr *repo,
+					  pldm_entity **entities,
+					  size_t num_entities, bool is_remote,
+					  uint16_t terminus_handle,
+					  uint32_t record_handle)
 {
-	int rc;
+	int64_t rc;
 
 	if (curr == NULL) {
-		return 0;
-	}
-	if (!record_handle) {
-		return -EINVAL;
+		// entity_association_pdr_add function gets called
+		// recursively for the siblings and children of the
+		// entity. This causes NULL current entity node, and the
+		// record handle is returned
+		return record_handle;
 	}
 
 	if (is_present(curr->entity, entities, num_entities)) {
 		rc = entity_association_pdr_add_entry(
 			curr, repo, is_remote, terminus_handle, record_handle);
-		if (rc) {
+		if (rc < 0) {
 			return rc;
 		}
+		if (rc >= UINT32_MAX) {
+			return -EOVERFLOW;
+		}
+		record_handle = rc + 1;
 	}
 
 	rc = entity_association_pdr_add(curr->next_sibling, repo, entities,
 					num_entities, is_remote,
 					terminus_handle, record_handle);
-	if (rc) {
+	if (rc < 0) {
 		return rc;
 	}
+	// entity_association_pdr_add return record handle in success
+	// case. If the pdr gets added to the repo, new record handle
+	// will be returned. Below check confirms if the pdr is added
+	// to the repo and increments the record handle
+	if (record_handle != rc) {
+		if (rc >= UINT32_MAX) {
+			return -EOVERFLOW;
+		}
+		record_handle = rc + 1;
+	}
 
-	return entity_association_pdr_add(curr->first_child, repo, entities,
-					  num_entities, is_remote,
-					  terminus_handle, record_handle);
+	rc = entity_association_pdr_add(curr->first_child, repo, entities,
+					num_entities, is_remote,
+					terminus_handle, record_handle);
+	return rc;
 }
 
 LIBPLDM_ABI_STABLE
@@ -1005,9 +1034,10 @@ int pldm_entity_association_pdr_add(pldm_entity_association_tree *tree,
 	if (!tree || !repo) {
 		return 0;
 	}
-	uint32_t record_handle = 0;
-	return entity_association_pdr_add(tree->root, repo, NULL, 0, is_remote,
-					  terminus_handle, &record_handle);
+	int64_t rc = entity_association_pdr_add(tree->root, repo, NULL, 0,
+						is_remote, terminus_handle, 0);
+	assert(rc >= INT_MIN);
+	return (rc < 0) ? (int)rc : 0;
 }
 
 LIBPLDM_ABI_STABLE
@@ -1030,10 +1060,12 @@ int pldm_entity_association_pdr_add_from_node_with_record_handle(
 		return -EINVAL;
 	}
 
-	entity_association_pdr_add(node, repo, entities, num_entities,
-				   is_remote, terminus_handle, &record_handle);
+	int64_t rc = entity_association_pdr_add(node, repo, entities,
+						num_entities, is_remote,
+						terminus_handle, record_handle);
 
-	return 0;
+	assert(rc >= INT_MIN);
+	return (rc < 0) ? (int)rc : 0;
 }
 
 static void find_entity_ref_in_tree(pldm_entity_node *tree_node,
@@ -1081,8 +1113,6 @@ void pldm_pdr_remove_pdrs_by_terminus_handle(pldm_pdr *repo,
 		return;
 	}
 
-	bool removed = false;
-
 	pldm_pdr_record *record = repo->first;
 	pldm_pdr_record *prev = NULL;
 	while (record != NULL) {
@@ -1102,26 +1132,10 @@ void pldm_pdr_remove_pdrs_by_terminus_handle(pldm_pdr *repo,
 			--repo->record_count;
 			repo->size -= record->size;
 			free(record);
-			removed = true;
 		} else {
 			prev = record;
 		}
 		record = next;
-	}
-
-	if (removed == true) {
-		record = repo->first;
-		uint32_t record_handle = 0;
-		while (record != NULL) {
-			record->record_handle = ++record_handle;
-			if (record->data != NULL) {
-				struct pldm_pdr_hdr *hdr =
-					(struct pldm_pdr_hdr *)(record->data);
-				hdr->record_handle =
-					htole32(record->record_handle);
-			}
-			record = record->next;
-		}
 	}
 }
 
