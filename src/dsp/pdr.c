@@ -460,40 +460,37 @@ LIBPLDM_ABI_TESTING
 int pldm_pdr_delete_by_record_handle(pldm_pdr *repo, uint32_t record_handle,
 				     bool is_remote)
 {
-	pldm_pdr_record *record;
-	pldm_pdr_record *prev = NULL;
-	int rc = 0;
-	uint16_t rec_handle = 0;
-
-	if (!repo) {
+	if (repo == NULL) {
 		return -EINVAL;
 	}
-	record = repo->first;
 
+	pldm_pdr_record *record = repo->first;
+	pldm_pdr_record *prev = NULL;
 	while (record != NULL) {
-		struct pldm_msgbuf _buf;
-		struct pldm_msgbuf *buf = &_buf;
-		rc = pldm_msgbuf_init_errno(buf, sizeof(struct pldm_pdr_hdr),
-					    record->data, record->size);
-
-		if (rc) {
-			return rc;
+		pldm_pdr_record *next = record->next;
+		struct pldm_pdr_hdr *hdr = (struct pldm_pdr_hdr *)record->data;
+		if ((record->is_remote == is_remote) &&
+		    (hdr->record_handle == record_handle)) {
+			if (repo->first == record) {
+				repo->first = next;
+			} else {
+				prev->next = next;
+			}
+			if (repo->last == record) {
+				repo->last = prev;
+			}
+			if (record->data) {
+				free(record->data);
+			}
+			--repo->record_count;
+			repo->size -= record->size;
+			free(record);
+			break;
 		}
-		if ((rc = pldm_msgbuf_extract(buf, rec_handle))) {
-			return rc;
-		}
-		if (record->is_remote == is_remote &&
-		    rec_handle == record_handle) {
-			prev = pldm_pdr_get_prev_record(repo, record);
-			return pldm_pdr_remove_record(repo, record, prev);
-		}
-		rc = pldm_msgbuf_complete(buf);
-		if (rc) {
-			return rc;
-		}
-		record = record->next;
+		prev = record;
+		record = next;
 	}
-	return -ENOENT;
+	return 0;
 }
 
 typedef struct pldm_entity_association_tree {
