@@ -78,6 +78,34 @@ enum pldm_fileio_file_type {
 	PLDM_FILE_TYPE_USER_PASSWORD_CHANGE = 0x19,
 };
 
+/** @brief PLDM File I/O password authentication status
+ */
+enum pldm_fileio_passwordauth_status {
+	PLDM_AUTHENTICATED = 0x00, //!< Authenticated successfully
+	PLDM_AUTHENTICATED_BUT_PASSWORD_EXPIRED = 0x01,
+	//!< Authenticated, but password expired
+	PLDM_NOT_AUTHENTICATED = 0x02, //!< Not Authenticated,
+				       //!< username or password invalid
+};
+
+/** @brief PLDM File I/O password change status
+ */
+enum pldm_fileio_passwordchange_status {
+	PLDM_PASSWORD_CHANGED = 0x00,	  //!< Password changed successfully
+	PLDM_PASSWORD_NOT_CHANGED = 0x02, //!< Not Changed,
+					  //!< username or password invalid
+	PLDM_PASSWORD_INVALID = 0x03, //!< New password is invalid, as it does
+				      //!< not  adhere to password rules
+};
+
+/** @brief PLDM File I/O admin operation status
+ */
+enum pldm_fileio_adminoperation_status {
+	PLDM_ADMIN_OP_NOT_ALLOWED = 0x00, //!< Not an admin role
+	PLDM_ADMIN_OP_ALLOWED =
+		0x01, //!< Admin role so, admin operations allowed
+};
+
 #define PLDM_RW_FILE_MEM_REQ_BYTES			  20
 #define PLDM_RW_FILE_MEM_RESP_BYTES			  5
 #define PLDM_GET_FILE_TABLE_REQ_BYTES			  6
