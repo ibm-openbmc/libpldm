@@ -325,6 +325,14 @@ typedef struct pldm_entity_node pldm_entity_node;
  */
 pldm_entity_association_tree *pldm_entity_association_tree_init(void);
 
+/** @brief Next Container ID from the association tree
+ *
+ *  @param[in] tree - opaque pointer acting as a handle to the tree
+ *
+ *  @return next container id - container id of the entity
+ */
+uint16_t next_container_id(pldm_entity_association_tree *tree);
+
 /** @brief Add a local entity into the entity association tree
  *
  *  @param[in/out] tree - opaque pointer acting as a handle to the tree
@@ -681,6 +689,84 @@ int pldm_entity_association_pdr_remove_contained_entity(
 int pldm_pdr_remove_fru_record_set_by_rsi(pldm_pdr *repo, uint16_t fru_rsi,
 					  bool is_remote,
 					  uint32_t *record_handle);
+
+/** @brief find the container ID of the contained entity
+ *
+ *  @param[in] repo - opaque pointer acting as a PDR repo handle
+ *  @param[in] entityType - entity type
+ *  @param[in] entityInstance - instance of the entity
+ *  @param[in] first_record_handle - record handle range start
+ *  @param[in] last_record_handle - record handle range end
+ *  @return container id present in entity association pdr for corresponding entity type and entity instance
+ */
+uint16_t pldm_find_container_id(const pldm_pdr *repo, uint16_t entityType,
+				uint16_t entityInstance,
+				uint32_t first_record_handle,
+				uint32_t last_record_handle);
+
+/** @brief update the container id of an effecter
+ *
+ *  @param[in] repo -  opaque pointer acting as a PDR repo handle
+ *  @param[in] effecterId - effecter ID
+ *  @param[in] containerId - conatiner ID to be updated
+ */
+void pldm_change_container_id_of_effecter(const pldm_pdr *repo,
+					  uint16_t effecterId,
+					  uint16_t containerId);
+
+/** @brief Get the entity using its record handle
+ *
+ *  @param[in] repo - opaque pointer acting as a PDR repo handle
+ *  @param[in] record_handle - record handle of input PDR record
+ *
+ *  @return pldm entity
+ */
+pldm_entity pldm_get_entity_from_record_handle(const pldm_pdr *repo,
+					       uint32_t record_handle);
+
+/** @brief deletes a node and it's children from the entity association tree
+ *  @param[in] tree - opaque pointer acting as a handle to the tree
+ *  @param[in] entity - the pldm entity to be deleted
+ *
+ *  @return none
+ */
+void pldm_entity_association_tree_delete_node(
+	pldm_entity_association_tree *tree, pldm_entity entity);
+
+/** @brief Find if given container entity belongs to the PLDM entity association tree
+ *
+ * @param[in] repo - opaque pointer to pldm PDR repo
+ * @param[in] parent - the container entity
+ * @param[in] is_remote - indicates which PDR to remove, local or remote
+ * @param[in] pdr_record_handle - record handle of the container entity
+ * @param[out] found - bool to indicate if parent entity is present in tree
+ *
+ *  @return 0 on success, -EINVAL if the arguments are invalid, -ENOMEM if an internal memory
+ *  allocation fails, or -EOVERFLOW if value is too large for defined type
+ */
+int pldm_entity_association_find_parent_entity(const pldm_pdr *repo,
+					       pldm_entity *parent,
+					       bool is_remote,
+					       uint32_t *record_handle,
+					       bool *found);
+
+/** @brief delete the pdr by effecter id
+ *
+ *  @param[in] repo - opaque pointer acting as a PDR repo handle
+ *  @param[in] effecter_id - effecter ID
+ *  @param[in] is_remote - indicates which PDR to remove, local or remote
+ */
+uint16_t pldm_delete_by_effecter_id(pldm_pdr *repo, uint16_t effecter_id,
+				    bool is_remote);
+
+/** @brief delete the pdr by sensor id
+ *
+ *  @param[in] repo - opaque pointer acting as a PDR repo handle
+ *  @param[in] sensor_id - sensor ID
+ *  @param[in] is_remote - indicates which PDR to remove, local or remote
+ */
+uint16_t pldm_delete_by_sensor_id(pldm_pdr *repo, uint16_t sensor_id,
+				  bool is_remote);
 
 #ifdef __cplusplus
 }
