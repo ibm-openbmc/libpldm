@@ -344,7 +344,7 @@ $VAR1 = {
                                       },
                             '5952' => {
                                         'Header' => 'utils.h',
-                                        'Line' => '108',
+                                        'Line' => '110',
                                         'Param' => {
                                                      '0' => {
                                                               'name' => 'transfer_flag',
@@ -356,7 +356,7 @@ $VAR1 = {
                                       },
                             '6012' => {
                                         'Header' => 'utils.h',
-                                        'Line' => '99',
+                                        'Line' => '101',
                                         'Param' => {
                                                      '0' => {
                                                               'name' => 'seconds',
@@ -388,7 +388,7 @@ $VAR1 = {
                                       },
                             '6256' => {
                                         'Header' => 'utils.h',
-                                        'Line' => '87',
+                                        'Line' => '89',
                                         'Param' => {
                                                      '0' => {
                                                               'name' => 'dec',
@@ -400,7 +400,7 @@ $VAR1 = {
                                       },
                             '6385' => {
                                         'Header' => 'utils.h',
-                                        'Line' => '81',
+                                        'Line' => '83',
                                         'Param' => {
                                                      '0' => {
                                                               'name' => 'bcd',
@@ -412,7 +412,7 @@ $VAR1 = {
                                       },
                             '6488' => {
                                         'Header' => 'utils.h',
-                                        'Line' => '75',
+                                        'Line' => '77',
                                         'Param' => {
                                                      '0' => {
                                                               'name' => 'dec',
@@ -424,7 +424,7 @@ $VAR1 = {
                                       },
                             '6604' => {
                                         'Header' => 'utils.h',
-                                        'Line' => '69',
+                                        'Line' => '71',
                                         'Param' => {
                                                      '0' => {
                                                               'name' => 'bcd',
@@ -436,7 +436,7 @@ $VAR1 = {
                                       },
                             '6707' => {
                                         'Header' => 'utils.h',
-                                        'Line' => '63',
+                                        'Line' => '65',
                                         'Param' => {
                                                      '0' => {
                                                               'name' => 'dec',
@@ -448,7 +448,7 @@ $VAR1 = {
                                       },
                             '6760' => {
                                         'Header' => 'utils.h',
-                                        'Line' => '57',
+                                        'Line' => '59',
                                         'Param' => {
                                                      '0' => {
                                                               'name' => 'bcd',
@@ -460,7 +460,7 @@ $VAR1 = {
                                       },
                             '6813' => {
                                         'Header' => 'utils.h',
-                                        'Line' => '51',
+                                        'Line' => '53',
                                         'Param' => {
                                                      '0' => {
                                                               'name' => 'version',
@@ -483,6 +483,7 @@ $VAR1 = {
                                         'ShortName' => 'ver2str'
                                       },
                             '6942' => {
+                                        'Alias' => 'pldm_edac_crc8',
                                         'Header' => 'utils.h',
                                         'Line' => '31',
                                         'Param' => {
@@ -502,8 +503,9 @@ $VAR1 = {
                                         'ShortName' => 'crc8'
                                       },
                             '7056' => {
+                                        'Alias' => 'pldm_edac_crc32',
                                         'Header' => 'utils.h',
-                                        'Line' => '39',
+                                        'Line' => '40',
                                         'Param' => {
                                                      '0' => {
                                                               'name' => 'data',
@@ -11033,6 +11035,8 @@ $VAR1 = {
                                                   'pldm_control_setup' => 1,
                                                   'pldm_delete_by_effecter_id' => 1,
                                                   'pldm_delete_by_sensor_id' => 1,
+                                                  'pldm_edac_crc32' => 1,
+                                                  'pldm_edac_crc8' => 1,
                                                   'pldm_entity_association_find_parent_entity' => 1,
                                                   'pldm_entity_association_pdr_add' => 1,
                                                   'pldm_entity_association_pdr_add_contained_entity_to_remote_pdr' => 1,
