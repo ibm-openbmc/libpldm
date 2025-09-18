@@ -817,6 +817,84 @@ TEST(SetNumericEffecterValue, testGoodDecodeRequest)
     EXPECT_EQ(value, effecter_value);
 }
 
+TEST(SetNumericEffecterValue, testGoodDecodeRequestUint64)
+{
+    std::array<uint8_t,
+               hdrSize + PLDM_SET_NUMERIC_EFFECTER_VALUE_MIN_REQ_BYTES + 7>
+        requestMsg{};
+
+    uint16_t effecter_id = 0x8000;
+    uint8_t effecter_data_size = PLDM_EFFECTER_DATA_SIZE_UINT64;
+    uint64_t effecter_value = 0x123456789ABCDEF0ULL;
+
+    uint16_t reteffecter_id;
+    uint8_t reteffecter_data_size;
+    uint8_t reteffecter_value[sizeof(uint64_t)];
+
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    auto req = reinterpret_cast<pldm_msg*>(requestMsg.data());
+    auto request =
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+        reinterpret_cast<struct pldm_set_numeric_effecter_value_req*>(
+            req->payload);
+
+    request->effecter_id = htole16(effecter_id);
+    request->effecter_data_size = effecter_data_size;
+    uint64_t effecter_value_le = htole64(effecter_value);
+    memcpy(request->effecter_value, &effecter_value_le,
+           sizeof(effecter_value_le));
+
+    auto rc = decode_set_numeric_effecter_value_req(
+        req, requestMsg.size() - hdrSize, &reteffecter_id,
+        &reteffecter_data_size, reteffecter_value);
+
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    uint64_t value = *(reinterpret_cast<uint64_t*>(reteffecter_value));
+    EXPECT_EQ(rc, PLDM_SUCCESS);
+    EXPECT_EQ(reteffecter_id, effecter_id);
+    EXPECT_EQ(reteffecter_data_size, effecter_data_size);
+    EXPECT_EQ(value, effecter_value);
+}
+
+TEST(SetNumericEffecterValue, testGoodDecodeRequestSint64)
+{
+    std::array<uint8_t,
+               hdrSize + PLDM_SET_NUMERIC_EFFECTER_VALUE_MIN_REQ_BYTES + 7>
+        requestMsg{};
+
+    uint16_t effecter_id = 0x8000;
+    uint8_t effecter_data_size = PLDM_EFFECTER_DATA_SIZE_SINT64;
+    int64_t effecter_value = -0x123456789ABCDEFLL;
+
+    uint16_t reteffecter_id;
+    uint8_t reteffecter_data_size;
+    uint8_t reteffecter_value[sizeof(int64_t)];
+
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    auto req = reinterpret_cast<pldm_msg*>(requestMsg.data());
+    auto request =
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+        reinterpret_cast<struct pldm_set_numeric_effecter_value_req*>(
+            req->payload);
+
+    request->effecter_id = htole16(effecter_id);
+    request->effecter_data_size = effecter_data_size;
+    uint64_t effecter_value_le = htole64((uint64_t)effecter_value);
+    memcpy(request->effecter_value, &effecter_value_le,
+           sizeof(effecter_value_le));
+
+    auto rc = decode_set_numeric_effecter_value_req(
+        req, requestMsg.size() - hdrSize, &reteffecter_id,
+        &reteffecter_data_size, reteffecter_value);
+
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    int64_t value = *(reinterpret_cast<int64_t*>(reteffecter_value));
+    EXPECT_EQ(rc, PLDM_SUCCESS);
+    EXPECT_EQ(reteffecter_id, effecter_id);
+    EXPECT_EQ(reteffecter_data_size, effecter_data_size);
+    EXPECT_EQ(value, effecter_value);
+}
+
 TEST(SetNumericEffecterValue, testBadDecodeRequest)
 {
     std::array<uint8_t, hdrSize + PLDM_SET_NUMERIC_EFFECTER_VALUE_MIN_REQ_BYTES>
@@ -895,7 +973,7 @@ TEST(SetNumericEffecterValue, testBadEncodeRequest)
     uint16_t effecter_value;
     rc = encode_set_numeric_effecter_value_req(
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-        0, 0, 6, reinterpret_cast<uint8_t*>(&effecter_value), request,
+        0, 0, 8, reinterpret_cast<uint8_t*>(&effecter_value), request,
         PLDM_SET_NUMERIC_EFFECTER_VALUE_MIN_REQ_BYTES);
     EXPECT_EQ(rc, PLDM_ERROR_INVALID_DATA);
 }
@@ -957,6 +1035,177 @@ TEST(SetNumericEffecterValue, testBadEncodeResponse)
     auto rc = encode_set_numeric_effecter_value_resp(
         0, PLDM_SUCCESS, NULL, PLDM_SET_NUMERIC_EFFECTER_VALUE_RESP_BYTES);
     EXPECT_EQ(rc, PLDM_ERROR_INVALID_DATA);
+}
+TEST(SetNumericEffecterValue, testGoodEncodeRequestUint64)
+{
+    uint16_t effecter_id = 0x1111;
+    uint8_t effecter_data_size = PLDM_EFFECTER_DATA_SIZE_UINT64;
+    uint64_t effecter_value = 0x123456789ABCDEF0ULL;
+
+    std::vector<uint8_t> requestMsg(
+        hdrSize + PLDM_SET_NUMERIC_EFFECTER_VALUE_MIN_REQ_BYTES + 7);
+
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
+
+    auto rc = encode_set_numeric_effecter_value_req(
+        0, effecter_id, effecter_data_size,
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+        reinterpret_cast<const uint8_t*>(&effecter_value), request,
+        PLDM_SET_NUMERIC_EFFECTER_VALUE_MIN_REQ_BYTES + 7);
+
+    EXPECT_EQ(rc, PLDM_SUCCESS);
+
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    auto req = reinterpret_cast<pldm_set_numeric_effecter_value_req*>(
+        request->payload);
+
+    {
+        uint16_t aligned;
+        memcpy(&aligned, &req->effecter_id, sizeof(aligned));
+        EXPECT_EQ(aligned, effecter_id);
+    }
+    EXPECT_EQ(req->effecter_data_size, effecter_data_size);
+
+    uint64_t val;
+    memcpy(&val, req->effecter_value, sizeof(val));
+    val = le64toh(val);
+    EXPECT_EQ(val, effecter_value);
+}
+
+TEST(SetNumericEffecterValue, testEncodeRequestUint64_Max)
+{
+    uint16_t effecter_id = 0xABCD;
+    uint8_t effecter_data_size = PLDM_EFFECTER_DATA_SIZE_UINT64;
+    uint64_t effecter_value = UINT64_MAX;
+
+    std::vector<uint8_t> requestMsg(
+        hdrSize + PLDM_SET_NUMERIC_EFFECTER_VALUE_MIN_REQ_BYTES + 7);
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
+
+    auto rc = encode_set_numeric_effecter_value_req(
+        0, effecter_id, effecter_data_size,
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+        reinterpret_cast<const uint8_t*>(&effecter_value), request,
+        PLDM_SET_NUMERIC_EFFECTER_VALUE_MIN_REQ_BYTES + 7);
+    EXPECT_EQ(rc, PLDM_SUCCESS);
+
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    auto req = reinterpret_cast<pldm_set_numeric_effecter_value_req*>(
+        request->payload);
+
+    uint64_t val;
+    memcpy(&val, req->effecter_value, sizeof(val));
+    val = le64toh(val);
+    EXPECT_EQ(val, UINT64_MAX);
+}
+
+TEST(SetNumericEffecterValue, testEncodeDecodeRoundTripUint64)
+{
+    uint16_t effecter_id = 0x1010;
+    uint8_t effecter_data_size = PLDM_EFFECTER_DATA_SIZE_UINT64;
+    uint64_t effecter_value = 0x0FEDCBA987654321ULL;
+
+    std::vector<uint8_t> requestMsg(
+        hdrSize + PLDM_SET_NUMERIC_EFFECTER_VALUE_MIN_REQ_BYTES + 7);
+
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    auto req = reinterpret_cast<pldm_msg*>(requestMsg.data());
+    ASSERT_EQ(encode_set_numeric_effecter_value_req(
+                  0, effecter_id, effecter_data_size,
+                  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+                  reinterpret_cast<const uint8_t*>(&effecter_value), req,
+                  requestMsg.size() - hdrSize),
+              PLDM_SUCCESS);
+
+    uint16_t reteffecter_id;
+    uint8_t reteffecter_data_size;
+    uint8_t reteffecter_value[sizeof(uint64_t)];
+
+    auto rc = decode_set_numeric_effecter_value_req(
+        req, requestMsg.size() - hdrSize, &reteffecter_id,
+        &reteffecter_data_size, reteffecter_value);
+    ASSERT_EQ(rc, PLDM_SUCCESS);
+
+    uint64_t val;
+    memcpy(&val, reteffecter_value, sizeof(val));
+    val = le64toh(val);
+    EXPECT_EQ(val, effecter_value);
+    EXPECT_EQ(reteffecter_id, effecter_id);
+    EXPECT_EQ(reteffecter_data_size, effecter_data_size);
+}
+
+TEST(SetNumericEffecterValue, testGoodEncodeRequestSint64)
+{
+    uint16_t effecter_id = 0x2222;
+    uint8_t effecter_data_size = PLDM_EFFECTER_DATA_SIZE_SINT64;
+    int64_t effecter_value = -0x123456789ABCDEFLL;
+
+    std::vector<uint8_t> requestMsg(
+        hdrSize + PLDM_SET_NUMERIC_EFFECTER_VALUE_MIN_REQ_BYTES + 7);
+
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
+
+    auto rc = encode_set_numeric_effecter_value_req(
+        0, effecter_id, effecter_data_size,
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+        reinterpret_cast<const uint8_t*>(&effecter_value), request,
+        PLDM_SET_NUMERIC_EFFECTER_VALUE_MIN_REQ_BYTES + 7);
+
+    EXPECT_EQ(rc, PLDM_SUCCESS);
+
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    auto req = reinterpret_cast<pldm_set_numeric_effecter_value_req*>(
+        request->payload);
+
+    {
+        uint16_t aligned;
+        memcpy(&aligned, &req->effecter_id, sizeof(aligned));
+        EXPECT_EQ(aligned, effecter_id);
+    }
+    EXPECT_EQ(req->effecter_data_size, effecter_data_size);
+
+    int64_t val;
+    memcpy(&val, req->effecter_value, sizeof(val));
+    val = (int64_t)le64toh((uint64_t)val);
+    EXPECT_EQ(val, effecter_value);
+}
+
+TEST(SetNumericEffecterValue, testEncodeDecodeRoundTripSint64)
+{
+    uint16_t effecter_id = 0x2020;
+    uint8_t effecter_data_size = PLDM_EFFECTER_DATA_SIZE_SINT64;
+    int64_t effecter_value = -0x0FEDCBA987654321LL;
+
+    std::vector<uint8_t> requestMsg(
+        hdrSize + PLDM_SET_NUMERIC_EFFECTER_VALUE_MIN_REQ_BYTES + 7);
+
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    auto req = reinterpret_cast<pldm_msg*>(requestMsg.data());
+    ASSERT_EQ(encode_set_numeric_effecter_value_req(
+                  0, effecter_id, effecter_data_size,
+                  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+                  reinterpret_cast<const uint8_t*>(&effecter_value), req,
+                  requestMsg.size() - hdrSize),
+              PLDM_SUCCESS);
+
+    uint16_t reteffecter_id;
+    uint8_t reteffecter_data_size;
+    uint8_t reteffecter_value[sizeof(int64_t)];
+
+    auto rc = decode_set_numeric_effecter_value_req(
+        req, requestMsg.size() - hdrSize, &reteffecter_id,
+        &reteffecter_data_size, reteffecter_value);
+    ASSERT_EQ(rc, PLDM_SUCCESS);
+
+    int64_t val;
+    memcpy(&val, reteffecter_value, sizeof(val));
+    val = (int64_t)le64toh((uint64_t)val);
+    EXPECT_EQ(val, effecter_value);
+    EXPECT_EQ(reteffecter_id, effecter_id);
+    EXPECT_EQ(reteffecter_data_size, effecter_data_size);
 }
 
 TEST(GetStateSensorReadings, testGoodEncodeResponse)
@@ -3179,6 +3428,208 @@ TEST(GetNumericEffecterValue, testBadDecodeResponse)
     EXPECT_EQ(rc, PLDM_ERROR_INVALID_DATA);
 }
 
+TEST(GetNumericEffecterValue, testGoodEncodeResponseUint64)
+{
+    uint8_t completionCode = 0;
+    uint8_t effecter_dataSize = PLDM_EFFECTER_DATA_SIZE_UINT64;
+    uint8_t effecter_operState = EFFECTER_OPER_STATE_ENABLED_NOUPDATEPENDING;
+    uint64_t pendingValue = 0x123456789ABCDEF0ULL;
+    uint64_t presentValue = 0xFEDCBA9876543210ULL;
+
+    std::array<uint8_t,
+               hdrSize + PLDM_GET_NUMERIC_EFFECTER_VALUE_MIN_RESP_BYTES + 14>
+        responseMsg{};
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    auto response = reinterpret_cast<pldm_msg*>(responseMsg.data());
+
+    auto rc = encode_get_numeric_effecter_value_resp(
+        0, completionCode, effecter_dataSize, effecter_operState,
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+        reinterpret_cast<uint8_t*>(&pendingValue),
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+        reinterpret_cast<uint8_t*>(&presentValue), response,
+        responseMsg.size() - hdrSize);
+
+    EXPECT_EQ(rc, PLDM_SUCCESS);
+
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    auto resp = reinterpret_cast<pldm_get_numeric_effecter_value_resp*>(
+        response->payload);
+
+    EXPECT_EQ(resp->effecter_data_size, effecter_dataSize);
+    EXPECT_EQ(resp->effecter_oper_state, effecter_operState);
+
+    uint64_t val_pending;
+    memcpy(&val_pending, &resp->pending_and_present_values[0],
+           sizeof(val_pending));
+    val_pending = le64toh(val_pending);
+
+    uint64_t val_present;
+    memcpy(&val_present, &resp->pending_and_present_values[sizeof(uint64_t)],
+           sizeof(val_present));
+    val_present = le64toh(val_present);
+
+    EXPECT_EQ(val_pending, pendingValue);
+    EXPECT_EQ(val_present, presentValue);
+}
+
+TEST(GetNumericEffecterValue, testGoodDecodeResponseUint64)
+{
+    std::array<uint8_t,
+               hdrSize + PLDM_GET_NUMERIC_EFFECTER_VALUE_MIN_RESP_BYTES + 14>
+        responseMsg{};
+
+    uint8_t completionCode = 0;
+    uint8_t effecter_dataSize = PLDM_EFFECTER_DATA_SIZE_UINT64;
+    uint8_t effecter_operState = EFFECTER_OPER_STATE_ENABLED_NOUPDATEPENDING;
+    uint64_t pendingValue = 0xCAFEBABEDEADBEEFULL;
+    uint64_t presentValue = 0x0102030405060708ULL;
+
+    uint8_t retcompletionCode;
+    uint8_t reteffecter_dataSize;
+    uint8_t reteffecter_operState;
+    uint8_t retpendingValue[8];
+    uint8_t retpresentValue[8];
+
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    auto response = reinterpret_cast<pldm_msg*>(responseMsg.data());
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    auto resp = reinterpret_cast<pldm_get_numeric_effecter_value_resp*>(
+        response->payload);
+
+    resp->completion_code = completionCode;
+    resp->effecter_data_size = effecter_dataSize;
+    resp->effecter_oper_state = effecter_operState;
+
+    uint64_t pendingValue_le = htole64(pendingValue);
+    memcpy(resp->pending_and_present_values, &pendingValue_le,
+           sizeof(pendingValue_le));
+    uint64_t presentValue_le = htole64(presentValue);
+    memcpy(&resp->pending_and_present_values[sizeof(uint64_t)],
+           &presentValue_le, sizeof(presentValue_le));
+
+    auto rc = decode_get_numeric_effecter_value_resp(
+        response, responseMsg.size() - hdrSize, &retcompletionCode,
+        &reteffecter_dataSize, &reteffecter_operState, retpendingValue,
+        retpresentValue);
+
+    EXPECT_EQ(rc, PLDM_SUCCESS);
+    EXPECT_EQ(completionCode, retcompletionCode);
+    EXPECT_EQ(effecter_dataSize, reteffecter_dataSize);
+    EXPECT_EQ(effecter_operState, reteffecter_operState);
+    {
+        uint64_t pv;
+        memcpy(&pv, retpendingValue, sizeof(pv));
+        EXPECT_EQ(pendingValue, pv);
+    }
+    {
+        uint64_t pv;
+        memcpy(&pv, retpresentValue, sizeof(pv));
+        EXPECT_EQ(presentValue, pv);
+    }
+}
+
+TEST(GetNumericEffecterValue, testGoodEncodeResponseSint64)
+{
+    uint8_t completionCode = 0;
+    uint8_t effecter_dataSize = PLDM_EFFECTER_DATA_SIZE_SINT64;
+    uint8_t effecter_operState = EFFECTER_OPER_STATE_ENABLED_NOUPDATEPENDING;
+    int64_t pendingValue = -0x123456789ABCDEFLL;
+    int64_t presentValue = 0x123456789ABCDEFLL;
+
+    std::array<uint8_t,
+               hdrSize + PLDM_GET_NUMERIC_EFFECTER_VALUE_MIN_RESP_BYTES + 14>
+        responseMsg{};
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    auto response = reinterpret_cast<pldm_msg*>(responseMsg.data());
+
+    auto rc = encode_get_numeric_effecter_value_resp(
+        0, completionCode, effecter_dataSize, effecter_operState,
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+        reinterpret_cast<uint8_t*>(&pendingValue),
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+        reinterpret_cast<uint8_t*>(&presentValue), response,
+        responseMsg.size() - hdrSize);
+
+    EXPECT_EQ(rc, PLDM_SUCCESS);
+
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    auto resp = reinterpret_cast<pldm_get_numeric_effecter_value_resp*>(
+        response->payload);
+
+    EXPECT_EQ(resp->effecter_data_size, effecter_dataSize);
+    EXPECT_EQ(resp->effecter_oper_state, effecter_operState);
+
+    int64_t val_pending;
+    memcpy(&val_pending, &resp->pending_and_present_values[0],
+           sizeof(val_pending));
+    val_pending = (int64_t)le64toh((uint64_t)val_pending);
+
+    int64_t val_present;
+    memcpy(&val_present, &resp->pending_and_present_values[sizeof(int64_t)],
+           sizeof(val_present));
+    val_present = (int64_t)le64toh((uint64_t)val_present);
+
+    EXPECT_EQ(val_pending, pendingValue);
+    EXPECT_EQ(val_present, presentValue);
+}
+
+TEST(GetNumericEffecterValue, testGoodDecodeResponseSint64)
+{
+    std::array<uint8_t,
+               hdrSize + PLDM_GET_NUMERIC_EFFECTER_VALUE_MIN_RESP_BYTES + 14>
+        responseMsg{};
+
+    uint8_t completionCode = 0;
+    uint8_t effecter_dataSize = PLDM_EFFECTER_DATA_SIZE_SINT64;
+    uint8_t effecter_operState = EFFECTER_OPER_STATE_ENABLED_NOUPDATEPENDING;
+    int64_t pendingValue = -0x123456789ABCDEFLL;
+    int64_t presentValue = 0x123456789ABCDEFLL;
+
+    uint8_t retcompletionCode;
+    uint8_t reteffecter_dataSize;
+    uint8_t reteffecter_operState;
+    uint8_t retpendingValue[8];
+    uint8_t retpresentValue[8];
+
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    auto response = reinterpret_cast<pldm_msg*>(responseMsg.data());
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    auto resp = reinterpret_cast<pldm_get_numeric_effecter_value_resp*>(
+        response->payload);
+
+    resp->completion_code = completionCode;
+    resp->effecter_data_size = effecter_dataSize;
+    resp->effecter_oper_state = effecter_operState;
+
+    uint64_t pendingValue_le = htole64((uint64_t)pendingValue);
+    memcpy(resp->pending_and_present_values, &pendingValue_le,
+           sizeof(pendingValue_le));
+    uint64_t presentValue_le = htole64((uint64_t)presentValue);
+    memcpy(&resp->pending_and_present_values[sizeof(uint64_t)],
+           &presentValue_le, sizeof(presentValue_le));
+
+    auto rc = decode_get_numeric_effecter_value_resp(
+        response, responseMsg.size() - hdrSize, &retcompletionCode,
+        &reteffecter_dataSize, &reteffecter_operState, retpendingValue,
+        retpresentValue);
+
+    EXPECT_EQ(rc, PLDM_SUCCESS);
+    EXPECT_EQ(completionCode, retcompletionCode);
+    EXPECT_EQ(effecter_dataSize, reteffecter_dataSize);
+    EXPECT_EQ(effecter_operState, reteffecter_operState);
+    {
+        int64_t pv;
+        memcpy(&pv, retpendingValue, sizeof(pv));
+        EXPECT_EQ(pendingValue, pv);
+    }
+    {
+        int64_t pv;
+        memcpy(&pv, retpresentValue, sizeof(pv));
+        EXPECT_EQ(presentValue, pv);
+    }
+}
+
 TEST(PldmPDRRepositoryChgEventEvent, testGoodDecodeRequest)
 {
     const uint8_t eventDataFormat = FORMAT_IS_PDR_HANDLES;
@@ -5180,8 +5631,17 @@ TEST(decodeNumericEffecterPdrData, Uint32Test)
     EXPECT_EQ(PLDM_SUCCESS, rc);
 
     EXPECT_EQ(PLDM_EFFECTER_DATA_SIZE_UINT32, decodedPdr.effecter_data_size);
-    EXPECT_EQ(4096, decodedPdr.max_settable.value_u32);
-    EXPECT_EQ(0, decodedPdr.min_settable.value_u32);
+    {
+        union_effecter_data_size aligned;
+        memcpy(&aligned, &decodedPdr.max_settable, sizeof(aligned));
+        EXPECT_EQ(4096u, aligned.value_u32);
+    }
+
+    {
+        union_effecter_data_size aligned;
+        memcpy(&aligned, &decodedPdr.min_settable, sizeof(aligned));
+        EXPECT_EQ(0u, aligned.value_u32);
+    }
     EXPECT_EQ(PLDM_RANGE_FIELD_FORMAT_UINT32, decodedPdr.range_field_format);
     EXPECT_EQ(0x1f, decodedPdr.range_field_support.byte);
     EXPECT_EQ(5000000, decodedPdr.nominal_value.value_u32);
@@ -5290,8 +5750,17 @@ TEST(decodeNumericEffecterPdrData, Sint32Test)
         decode_numeric_effecter_pdr_data(pdr1.data(), pdr1.size(), &decodedPdr);
     EXPECT_EQ(PLDM_SUCCESS, rc);
     EXPECT_EQ(PLDM_EFFECTER_DATA_SIZE_SINT32, decodedPdr.effecter_data_size);
-    EXPECT_EQ(100000, decodedPdr.max_settable.value_s32);
-    EXPECT_EQ(-100000, decodedPdr.min_settable.value_s32);
+    {
+        union_effecter_data_size aligned;
+        memcpy(&aligned, &decodedPdr.max_settable, sizeof(aligned));
+        EXPECT_EQ(100000, aligned.value_s32);
+    }
+
+    {
+        union_effecter_data_size aligned;
+        memcpy(&aligned, &decodedPdr.min_settable, sizeof(aligned));
+        EXPECT_EQ(-100000, aligned.value_s32);
+    }
     EXPECT_EQ(PLDM_RANGE_FIELD_FORMAT_SINT32, decodedPdr.range_field_format);
     EXPECT_EQ(0x1f, decodedPdr.range_field_support.byte);
     EXPECT_EQ(0, decodedPdr.nominal_value.value_s32);
@@ -5404,8 +5873,18 @@ TEST(decodeNumericEffecterPdrData, Real32Test)
     EXPECT_EQ(PLDM_EFFECTER_DATA_SIZE_SINT32, decodedPdr.effecter_data_size);
     EXPECT_FLOAT_EQ(1.0f, decodedPdr.state_transition_interval);
     EXPECT_FLOAT_EQ(1.0f, decodedPdr.transition_interval);
-    EXPECT_EQ(100000, decodedPdr.max_settable.value_s32);
-    EXPECT_EQ(-100000, decodedPdr.min_settable.value_s32);
+
+    {
+        union_effecter_data_size aligned;
+        memcpy(&aligned, &decodedPdr.max_settable, sizeof(aligned));
+        EXPECT_EQ(100000, aligned.value_s32);
+    }
+
+    {
+        union_effecter_data_size aligned;
+        memcpy(&aligned, &decodedPdr.min_settable, sizeof(aligned));
+        EXPECT_EQ(-100000, aligned.value_s32);
+    }
     EXPECT_EQ(PLDM_RANGE_FIELD_FORMAT_REAL32, decodedPdr.range_field_format);
     EXPECT_EQ(0x1f, decodedPdr.range_field_support.byte);
     EXPECT_FLOAT_EQ(0, decodedPdr.nominal_value.value_f32);
@@ -5413,6 +5892,302 @@ TEST(decodeNumericEffecterPdrData, Real32Test)
     EXPECT_FLOAT_EQ(-50.05f, decodedPdr.normal_min.value_f32);
     EXPECT_FLOAT_EQ(300.003f, decodedPdr.rated_max.value_f32);
     EXPECT_FLOAT_EQ(-300.003f, decodedPdr.rated_min.value_f32);
+}
+
+TEST(decodeNumericEffecterPdrData, Uint64Test)
+{
+    std::vector<uint8_t> pdr1{
+        0x1,
+        0x0,
+        0x0,
+        0x0,                       // recordHandle
+        0x1,                       // version
+        PLDM_NUMERIC_EFFECTER_PDR, // type
+        0x0,
+        0x0, // recordChangeNumber
+        PLDM_PDR_NUMERIC_EFFECTER_PDR_FIXED_LENGTH +
+            PLDM_PDR_NUMERIC_EFFECTER_PDR_VARIED_EFFECTER_DATA_SIZE_MIN_LENGTH *
+                8 +
+            PLDM_PDR_NUMERIC_EFFECTER_PDR_VARIED_RANGE_FIELD_MIN_LENGTH * 8,
+        0, // dataLength
+        0,
+        0, // PLDMTerminusHandle
+        0x1,
+        0x0, // effecterID=1
+        PLDM_ENTITY_POWER_SUPPLY,
+        0, // entityType=Power Supply(120)
+        1,
+        0, // entityInstanceNumber
+        0x1,
+        0x0, // containerID=1
+        0x2,
+        0x0,                            // effecter_semantic_id=2
+        PLDM_NO_INIT,                   // effecterInit
+        false,                          // effecterAuxiliaryNames
+        PLDM_SENSOR_UNIT_DEGRESS_C,     // baseUint(2)=degrees C
+        0,                              // unitModifier
+        0,                              // rateUnit
+        0,                              // baseOEMUnitHandle
+        0,                              // auxUnit
+        0,                              // auxUnitModifier
+        0,                              // auxRateUnit
+        0,                              // auxOEMUnitHandle
+        true,                           // isLinear
+        PLDM_EFFECTER_DATA_SIZE_UINT64, // effecterDataSize
+        0,
+        0,
+        0,
+        0, // resolution
+        0,
+        0,
+        0,
+        0, // offset
+        0,
+        0, // accuracy
+        0, // plusTolerance
+        0, // minusTolerance
+        0,
+        0,
+        0x80,
+        0x3f, // stateTransistionInterval=1.0
+        0,
+        0,
+        0x80,
+        0x3f, // transition_interval=1.0
+        0xf0,
+        0xde,
+        0xbc,
+        0x9a,
+        0x78,
+        0x56,
+        0x34,
+        0x12, // maxSettable = 0x123456789ABCDEF0
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,                           // minSettable = 0
+        PLDM_RANGE_FIELD_FORMAT_UINT64, // rangeFieldFormat
+        0x1f,                           // rangeFieldsupport
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x01, // nominalValue = 0x0100000000000000
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x02, // normalMax = 0x0200000000000000
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00, // normalMin = 0
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x03, // rated_max = 0x0300000000000000
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00 // rated_min = 0
+    };
+
+    struct pldm_numeric_effecter_value_pdr decodedPdr;
+    auto rc =
+        decode_numeric_effecter_pdr_data(pdr1.data(), pdr1.size(), &decodedPdr);
+    EXPECT_EQ(PLDM_SUCCESS, rc);
+
+    EXPECT_EQ(PLDM_EFFECTER_DATA_SIZE_UINT64, decodedPdr.effecter_data_size);
+
+    {
+        union_effecter_data_size aligned;
+        memcpy(&aligned, &decodedPdr.max_settable, sizeof(aligned));
+        EXPECT_EQ(0x123456789ABCDEF0ULL, aligned.value_u64);
+    }
+
+    {
+        union_effecter_data_size aligned;
+        memcpy(&aligned, &decodedPdr.min_settable, sizeof(aligned));
+        EXPECT_EQ(0ULL, aligned.value_u64);
+    }
+
+    EXPECT_EQ(PLDM_RANGE_FIELD_FORMAT_UINT64, decodedPdr.range_field_format);
+    EXPECT_EQ(0x1f, decodedPdr.range_field_support.byte);
+    EXPECT_EQ(0x0100000000000000ULL, decodedPdr.nominal_value.value_u64);
+    EXPECT_EQ(0x0200000000000000ULL, decodedPdr.normal_max.value_u64);
+    EXPECT_EQ(0ULL, decodedPdr.normal_min.value_u64);
+    EXPECT_EQ(0x0300000000000000ULL, decodedPdr.rated_max.value_u64);
+    EXPECT_EQ(0ULL, decodedPdr.rated_min.value_u64);
+}
+
+TEST(decodeNumericEffecterPdrData, Sint64Test)
+{
+    std::vector<uint8_t> pdr1{
+        0x1,
+        0x0,
+        0x0,
+        0x0,                       // recordHandle
+        0x1,                       // version
+        PLDM_NUMERIC_EFFECTER_PDR, // type
+        0x0,
+        0x0, // recordChangeNumber
+        PLDM_PDR_NUMERIC_EFFECTER_PDR_FIXED_LENGTH +
+            PLDM_PDR_NUMERIC_EFFECTER_PDR_VARIED_EFFECTER_DATA_SIZE_MIN_LENGTH *
+                8 +
+            PLDM_PDR_NUMERIC_EFFECTER_PDR_VARIED_RANGE_FIELD_MIN_LENGTH * 8,
+        0, // dataLength
+        0,
+        0, // PLDMTerminusHandle
+        0x1,
+        0x0, // effecterID=1
+        PLDM_ENTITY_POWER_SUPPLY,
+        0, // entityType=Power Supply(120)
+        1,
+        0, // entityInstanceNumber
+        0x1,
+        0x0, // containerID=1
+        0x2,
+        0x0,                            // effecter_semantic_id=2
+        PLDM_NO_INIT,                   // effecterInit
+        false,                          // effecterAuxiliaryNames
+        PLDM_SENSOR_UNIT_DEGRESS_C,     // baseUint(2)=degrees C
+        0,                              // unitModifier
+        0,                              // rateUnit
+        0,                              // baseOEMUnitHandle
+        0,                              // auxUnit
+        0,                              // auxUnitModifier
+        0,                              // auxRateUnit
+        0,                              // auxOEMUnitHandle
+        true,                           // isLinear
+        PLDM_EFFECTER_DATA_SIZE_SINT64, // effecterDataSize
+        0,
+        0,
+        0,
+        0, // resolution
+        0,
+        0,
+        0,
+        0, // offset
+        0,
+        0, // accuracy
+        0, // plusTolerance
+        0, // minusTolerance
+        0,
+        0,
+        0x80,
+        0x3f, // stateTransistionInterval=1.0
+        0,
+        0,
+        0x80,
+        0x3f, // transition_interval=1.0
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x01,
+        0x00, // maxSettable = 0x0001000000000000
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0xff,
+        0xff,                           // minSettable = -0x0001000000000000
+        PLDM_RANGE_FIELD_FORMAT_SINT64, // rangeFieldFormat
+        0x1f,                           // rangeFieldsupport
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00, // nominalValue = 0
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x01,
+        0x00, // normalMax = 0x0001000000000000
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0xff,
+        0xff, // normalMin = -0x0001000000000000
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x02,
+        0x00, // rated_max = 0x0002000000000000
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0xfe,
+        0xff // rated_min = -0x0002000000000000
+    };
+
+    struct pldm_numeric_effecter_value_pdr decodedPdr;
+    auto rc =
+        decode_numeric_effecter_pdr_data(pdr1.data(), pdr1.size(), &decodedPdr);
+    EXPECT_EQ(PLDM_SUCCESS, rc);
+
+    EXPECT_EQ(PLDM_EFFECTER_DATA_SIZE_SINT64, decodedPdr.effecter_data_size);
+
+    {
+        union_effecter_data_size aligned;
+        memcpy(&aligned, &decodedPdr.max_settable, sizeof(aligned));
+        EXPECT_EQ(0x0001000000000000LL, aligned.value_s64);
+    }
+
+    {
+        union_effecter_data_size aligned;
+        memcpy(&aligned, &decodedPdr.min_settable, sizeof(aligned));
+        EXPECT_EQ(-0x0001000000000000LL, aligned.value_s64);
+    }
+
+    EXPECT_EQ(PLDM_RANGE_FIELD_FORMAT_SINT64, decodedPdr.range_field_format);
+    EXPECT_EQ(0x1f, decodedPdr.range_field_support.byte);
+    EXPECT_EQ(0LL, decodedPdr.nominal_value.value_s64);
+    EXPECT_EQ(0x0001000000000000LL, decodedPdr.normal_max.value_s64);
+    EXPECT_EQ(-0x0001000000000000LL, decodedPdr.normal_min.value_s64);
+    EXPECT_EQ(0x0002000000000000LL, decodedPdr.rated_max.value_s64);
+    EXPECT_EQ(-0x0002000000000000LL, decodedPdr.rated_min.value_s64);
 }
 #endif
 

@@ -547,6 +547,82 @@ pldm__msgbuf_extract_real32(struct pldm_msgbuf *ctx, void *dst)
 	return -EOVERFLOW;
 }
 
+#define pldm_msgbuf_extract_uint64(ctx, dst)                                   \
+	pldm_msgbuf_extract_typecheck(uint64_t, pldm__msgbuf_extract_uint64,   \
+				      dst, ctx, (void *)&(dst))
+LIBPLDM_CC_NONNULL
+LIBPLDM_CC_ALWAYS_INLINE int
+// NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
+pldm__msgbuf_extract_uint64(struct pldm_msgbuf *ctx, void *dst)
+{
+	uint64_t ldst;
+
+	static_assert(sizeof(uint64_t) == sizeof(ldst),
+		      "Mismatched type sizes for dst and ldst");
+
+	if (!ctx->cursor) {
+		return -EINVAL;
+	}
+
+	static_assert(
+		// NOLINTNEXTLINE(bugprone-sizeof-expression)
+		sizeof(ldst) < INTMAX_MAX,
+		"The following addition may not uphold the runtime assertion");
+
+	if (ctx->remaining >= (intmax_t)sizeof(ldst)) {
+		memcpy(&ldst, ctx->cursor, sizeof(ldst));
+		ldst = le64toh(ldst);
+		memcpy(dst, &ldst, sizeof(ldst));
+		ctx->cursor += sizeof(ldst);
+		ctx->remaining -= sizeof(ldst);
+		return 0;
+	}
+
+	if (ctx->remaining >= INTMAX_MIN + (intmax_t)sizeof(ldst)) {
+		ctx->remaining -= sizeof(ldst);
+	}
+
+	return -EOVERFLOW;
+}
+
+#define pldm_msgbuf_extract_int64(ctx, dst)                                    \
+	pldm_msgbuf_extract_typecheck(int64_t, pldm__msgbuf_extract_int64,     \
+				      dst, ctx, (void *)&(dst))
+LIBPLDM_CC_NONNULL
+LIBPLDM_CC_ALWAYS_INLINE int
+// NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
+pldm__msgbuf_extract_int64(struct pldm_msgbuf *ctx, void *dst)
+{
+	uint64_t ldst;
+
+	static_assert(sizeof(int64_t) == sizeof(ldst),
+		      "Mismatched type sizes for dst and ldst");
+
+	if (!ctx->cursor) {
+		return -EINVAL;
+	}
+
+	static_assert(
+		// NOLINTNEXTLINE(bugprone-sizeof-expression)
+		sizeof(ldst) < INTMAX_MAX,
+		"The following addition may not uphold the runtime assertion");
+
+	if (ctx->remaining >= (intmax_t)sizeof(ldst)) {
+		memcpy(&ldst, ctx->cursor, sizeof(ldst));
+		ldst = le64toh(ldst);
+		memcpy(dst, &ldst, sizeof(ldst));
+		ctx->cursor += sizeof(ldst);
+		ctx->remaining -= sizeof(ldst);
+		return 0;
+	}
+
+	if (ctx->remaining >= INTMAX_MIN + (intmax_t)sizeof(ldst)) {
+		ctx->remaining -= sizeof(ldst);
+	}
+
+	return -EOVERFLOW;
+}
+
 /**
  * Extract the field at the msgbuf cursor into the lvalue named by dst.
  *
@@ -564,7 +640,9 @@ pldm__msgbuf_extract_real32(struct pldm_msgbuf *ctx, void *dst)
 		int16_t: pldm__msgbuf_extract_int16,                           \
 		uint32_t: pldm__msgbuf_extract_uint32,                         \
 		int32_t: pldm__msgbuf_extract_int32,                           \
-		real32_t: pldm__msgbuf_extract_real32)(ctx, (void *)&(dst))
+		real32_t: pldm__msgbuf_extract_real32,                         \
+		uint64_t: pldm__msgbuf_extract_uint64,                         \
+		int64_t: pldm__msgbuf_extract_int64)(ctx, (void *)&(dst))
 
 /**
  * Extract the field at the msgbuf cursor into the object pointed-to by dst.
@@ -583,7 +661,9 @@ pldm__msgbuf_extract_real32(struct pldm_msgbuf *ctx, void *dst)
 		int16_t *: pldm__msgbuf_extract_int16,                         \
 		uint32_t *: pldm__msgbuf_extract_uint32,                       \
 		int32_t *: pldm__msgbuf_extract_int32,                         \
-		real32_t *: pldm__msgbuf_extract_real32)(ctx, dst)
+		real32_t *: pldm__msgbuf_extract_real32,                       \
+		uint64_t *: pldm__msgbuf_extract_uint64,                       \
+		int64_t *: pldm__msgbuf_extract_int64)(ctx, dst)
 
 /**
  * @ref pldm_msgbuf_extract_array
@@ -671,6 +751,35 @@ LIBPLDM_CC_ALWAYS_INLINE int pldm_msgbuf_insert_uint64(struct pldm_msgbuf *ctx,
 						       const uint64_t src)
 {
 	uint64_t val = htole64(src);
+
+	if (!ctx->cursor) {
+		return -EINVAL;
+	}
+
+	static_assert(
+		// NOLINTNEXTLINE(bugprone-sizeof-expression)
+		sizeof(src) < INTMAX_MAX,
+		"The following addition may not uphold the runtime assertion");
+
+	if (ctx->remaining >= (intmax_t)sizeof(src)) {
+		memcpy(ctx->cursor, &val, sizeof(val));
+		ctx->cursor += sizeof(src);
+		ctx->remaining -= sizeof(src);
+		return 0;
+	}
+
+	if (ctx->remaining >= INTMAX_MIN + (intmax_t)sizeof(src)) {
+		ctx->remaining -= sizeof(src);
+	}
+
+	return -EOVERFLOW;
+}
+
+LIBPLDM_CC_NONNULL
+LIBPLDM_CC_ALWAYS_INLINE int pldm_msgbuf_insert_int64(struct pldm_msgbuf *ctx,
+						      const int64_t src)
+{
+	uint64_t val = htole64((uint64_t)src);
 
 	if (!ctx->cursor) {
 		return -EINVAL;
@@ -873,7 +982,8 @@ LIBPLDM_CC_ALWAYS_INLINE int pldm_msgbuf_insert_int8(struct pldm_msgbuf *ctx,
 		int16_t: pldm_msgbuf_insert_int16,                             \
 		uint32_t: pldm_msgbuf_insert_uint32,                           \
 		int32_t: pldm_msgbuf_insert_int32,                             \
-		uint64_t: pldm_msgbuf_insert_uint64)(dst, src)
+		uint64_t: pldm_msgbuf_insert_uint64,                           \
+		int64_t: pldm_msgbuf_insert_int64)(dst, src)
 
 /**
  * @ref pldm_msgbuf_insert_array
