@@ -153,7 +153,9 @@ enum pldm_state_set_health_state_values {
 /* @brief List of states for the State Set Availability (ID 2),
  */
 enum pldm_state_set_availability_values {
-	PLDM_STATE_SET_AVAILABILITY_REBOOTING = 8
+	PLDM_STATE_SET_AVAILABILITY_ENABLED = 1,
+	PLDM_STATE_SET_AVAILABILITY_DISABLED = 2,
+	PLDM_STATE_SET_AVAILABILITY_REBOOTING = 8,
 };
 
 /* @brief List of states for the Operational Stress status (ID 9).
