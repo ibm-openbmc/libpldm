@@ -22,6 +22,7 @@ Change categories:
 - utils: Introduce `pldm_edac_crc32()`
 - utils: Introduce `pldm_edac_crc8()`
 - stateset: Added new enum pldm_state_set_presence_values from DSP0249 v1.4.0
+- oem: ibm: Add new file type support
 
 ### Changed
 
